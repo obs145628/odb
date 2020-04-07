@@ -19,12 +19,4 @@ namespace odb {
 struct Request;
 struct Response;
 
-using regidx_t = std::uint32_t;
-
-enum class RegKind {
-  general,
-  program_counter,
-  stack_pointer,
-};
-
 } // namespace odb

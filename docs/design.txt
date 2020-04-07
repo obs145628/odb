@@ -34,18 +34,24 @@
 Master class that controls everything server-side.
 
 DebuguerLoop (call to next_ins / terminate)
-This loop keep running as long as the debugger is in blocked state, and the client is connected
+     This loop keep running as long as the debugger is in stopped state,
+     and the client is connected
      (breakpoint reached, step by step exec, program finished)
      It calls `run_command` that communicates with the client to get a command
      to give to the Debugguer. A `command` is simply a function call to the Debuguer API.
      `run_command` block until it gets a command from the client, or the client is disconnected.
+
+     The first time the DebuguerLoop is entered, the VM is ready
+     but no instruction has been executed yet. A call to Debugguer.on_init() is called.
+     On all other entries to Debuguer Loop, an instruction just get executed, and
+     `Debugger.on_init()` is called.
      
 
 ## Debugger
 
 The class that implements all of the debugging logics.
 Receive `commands` through basic method calls (eg: get_reg, read_mem)
-State: NOT_STARTED, BLOCKED, RUNNING, TERMINATED
+State: NOT_STARTED, STOPED, RUNNING, TERMINATED
 Also tell if the program should exec next intruction or wait for a command to tell it to do so.
 
 ## ClientHandler

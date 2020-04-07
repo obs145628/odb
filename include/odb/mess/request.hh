@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "../server/fwd.hh"
 #include "fwd.hh"
 #include <algorithm>
 #include <cstdint>
@@ -55,25 +56,25 @@ public:
   // Registers can have any size
   // Response is bytes_array
   struct ReqGetReg : public ReqBase {
-    regidx_t idx;
-    ReqGetReg(regidx_t idx) : idx(idx) {}
+    vm_reg_t idx;
+    ReqGetReg(vm_reg_t idx) : idx(idx) {}
     void accept(Visitor &v) const override { v.visit(*this); }
   };
 
   // Returns static infos about a register (name, size, datatype, is special ?)
   // Response is reg_infos
   struct ReqGetRegInfos : public ReqBase {
-    regidx_t idx;
-    ReqGetRegInfos(regidx_t idx) : idx(idx) {}
+    vm_reg_t idx;
+    ReqGetRegInfos(vm_reg_t idx) : idx(idx) {}
     void accept(Visitor &v) const override { v.visit(*this); }
   };
 
   // Change the value of register `idx`
   // Reponse is success
   struct ReqSetReg : public ReqBase {
-    regidx_t idx;
+    vm_reg_t idx;
     std::vector<std::uint8_t> bytes;
-    ReqSetReg(regidx_t idx, const std::vector<std::uint8_t> &bytes)
+    ReqSetReg(vm_reg_t idx, const std::vector<std::uint8_t> &bytes)
         : idx(idx), bytes(bytes) {}
     void accept(Visitor &v) const override { v.visit(*this); }
   };
@@ -93,15 +94,15 @@ public:
     return dynamic_cast<const T &>(_data.get());
   }
 
-  static Request make_get_reg(regidx_t idx) {
+  static Request make_get_reg(vm_reg_t idx) {
     return Request(Type::get_reg, std::make_unique<ReqGetReg>(idx));
   }
 
-  static Request make_get_reg_infos(regidx_t idx) {
+  static Request make_get_reg_infos(vm_reg_t idx) {
     return Request(Type::get_reg_infos, std::make_unique<ReqGetRegInfos>(idx));
   }
 
-  static Request make_set_reg(regidx_t idx,
+  static Request make_set_reg(vm_reg_t idx,
                               const std::vector<std::uint8_t> &bytes) {
     return Request(Type::set_reg, std::make_unique<ReqSetReg>(idx, bytes));
   }
