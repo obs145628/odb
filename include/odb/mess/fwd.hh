@@ -1,4 +1,4 @@
-//===-- core/fwd.hh - Forward Definitions ----------------------*- C++//-*-===//
+//===-- mess/fwd.hh - Forward Definitions ----------------------*- C++//-*-===//
 //
 // ODB Library
 // Author: Steven Lariau

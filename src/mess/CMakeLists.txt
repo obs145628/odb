@@ -2,7 +2,7 @@ set(SRC
   request.cc
   response.cc
 )
-add_library(odb_core ${SRC})
+add_library(odb_mess ${SRC})
 
 
 #set(TEST_SRC

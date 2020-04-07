@@ -1,0 +1,56 @@
+
+# Directories
+
+- src/server: All codebase running only on the server (VM / Debugger Backend)
+
+- src/client: All codebase running only on the client (Debugger Interface / Frontend)
+
+- src/mess: All codebase related to message passing between client and server,
+  running on both sides
+
+# Server Side (Emulator / VM)
+
+## Execution Flow
+
+1) When starting the VM, create instance of `ServerApp`, that requires:
+   - many informations about the VM (eg nb regs, mem size)
+   - settings to tell how the debugger can be controller externally
+     (eg TCP, Websockets, port ? stdin ?)
+     these are also set using env variables
+   This call may block if the setting that requires to wait for a client before start is set.
+
+2) When running, in the main loop, right before executing an intruction,
+   call `next_ins` on ServerApp, giving some other infos about current state (eg pc location)
+   The program will enter the DebuguerLoop, and will not quit it until ready for next ins.
+   The DebuguerLoop may block (that's how breakpoints / step by step execution is working).
+
+3) Once the program finished, call `terminate` on ServerApp, with some dtails such as
+   PC of ins was caused stop, if it was a crash or normal exit.
+   The program will enter the DebuguerLoop, and will not quit it until client is disconnected.
+
+
+## ServerApp
+
+Master class that controls everything server-side.
+
+DebuguerLoop (call to next_ins / terminate)
+This loop keep running as long as the debugger is in blocked state, and the client is connected
+     (breakpoint reached, step by step exec, program finished)
+     It calls `run_command` that communicates with the client to get a command
+     to give to the Debugguer. A `command` is simply a function call to the Debuguer API.
+     `run_command` block until it gets a command from the client, or the client is disconnected.
+     
+
+## Debugger
+
+The class that implements all of the debugging logics.
+Receive `commands` through basic method calls (eg: get_reg, read_mem)
+State: NOT_STARTED, BLOCKED, RUNNING, TERMINATED
+Also tell if the program should exec next intruction or wait for a command to tell it to do so.
+
+## ClientHandler
+
+His simple role is to wait for a client to connect, read commands from input,
+parse and use Debugger API, then send back result to client.
+Generic interface.
+Many implem for different client types: TCP, Websockets, Pipe, stdin

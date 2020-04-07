@@ -1,4 +1,4 @@
-//===-- core/request.hh - Request struct definition ------------*- C++//-*-===//
+//===-- mess/request.hh - Request struct definition ------------*- C++//-*-===//
 //
 // ODB Library
 // Author: Steven Lariau
