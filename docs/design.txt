@@ -44,7 +44,11 @@ DebuguerLoop (call to next_ins / terminate)
      The first time the DebuguerLoop is entered, the VM is ready
      but no instruction has been executed yet. A call to Debugguer.on_init() is called.
      On all other entries to Debuguer Loop, an instruction just get executed, and
-     `Debugger.on_init()` is called.
+     `Debugger.on_update()` is called.
+
+     The Execution can either block at the beginning, without executing a single instruction,
+     to wait for a client, or instead run usually, and pause execution as soon as a client
+     get connected.
      
 
 ## Debugger
@@ -63,25 +67,11 @@ Many implem for different client types: TCP, Websockets, Pipe, stdin
 
 
 
-## Callback API
+## VMApi
 
-get_reg (idx, out_reg_ptr, bool only_vals)
-set_reg As API
-find_reg_id: As API
-
-read_mem: As API
-write_mem: As API
-
-vector get_syms(addr, sire)
-get_sym_infos(idx, out_sym_ptr)
-find_sym_id: As API
-get_code_text: As API
-Initialization info:
-
-- registers_count
-- list_regs
-- get_memory_size
-- symbols_count
+Abstract class, to query and edit VM state.
+Need to be implemented for a VM to work with ODB.
+This class it what makes possible to have a generic debugguer for any kind of VM.
 
 At each step
 

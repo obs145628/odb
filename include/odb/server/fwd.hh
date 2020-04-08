@@ -61,6 +61,28 @@ struct SymbolInfos {
   vm_ptr_t addr;
 };
 
+struct VMInfos {
+  std::string name;
+
+  vm_reg_t regs_count; // Total number of registers. If dynamic number /
+                       // infinite regs, can simply set to MAX value.
+
+  // All registers by kind
+  // Same remark than regs_count. If dynamic, can only list important ones, or
+  // empty list.
+  std::vector<vm_reg_t> regs_general;
+  std::vector<vm_reg_t> regs_program_counter;
+  std::vector<vm_reg_t> regs_stack_pointer;
+  std::vector<vm_reg_t> regs_base_pointer;
+  std::vector<vm_reg_t> regs_flags;
+
+  // End of memory address
+  vm_size_t memory_size;
+
+  // If symbols loaded during execution, can simply set to MAX value
+  vm_sym_t symbols_count;
+};
+
 class Debugger;
 
 constexpr vm_sym_t SYM_ID_NONE = static_cast<vm_sym_t>(-1);

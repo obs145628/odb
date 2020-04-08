@@ -13,7 +13,8 @@
 #pragma once
 
 #include "fwd.hh"
-#include <exception>
+#include "vm-api.hh"
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -35,23 +36,18 @@ namespace odb {
 class Debugger {
 
 public:
-  class Error : public std::exception {
-
-  public:
-    Error(std::string msg) : _msg(msg) {}
-
-    const char *what() const throw() { return _msg.c_str(); }
-
-  private:
-    std::string _msg;
-  };
-
   enum class State {
     NOT_STARTED, // Haven't executed the first ins yet
     STOPPED,     // Stopped at a specific code position
     RUNNING,
-    TERMIDATED, // either normal exit or crash
+    ERROR, // program termidated because of an error
+    EXIT,  // program termidated because of a normal exit
   };
+
+  /// Create a debugger connected to a specific vm through a VMAPI instance
+  Debugger(std::unique_ptr<VMApi> &&vm);
+
+  Debugger(const Debugger &) = delete;
 
   struct CallInfos {
     vm_ptr_t
@@ -129,7 +125,7 @@ public:
   vm_sym_t symbols_count();
 
   /// Returns a symbol id given its name
-  vm_sym_t find_sym_id(const char *name);
+  vm_sym_t find_sym_id(const std::string &name);
 
   /// Get the text format of the instruction or data directive at address `addr`
   /// Store in `addr_dist` the number of opcode bytes read
@@ -158,6 +154,9 @@ public:
   /// Resume program execution
   void resume(ResumeType type);
 
+  /// Switch the debugger to STOPPED state at the actual point in execution
+  void stop();
+
   State get_state() const { return _state; }
 
   // Current Call stack
@@ -166,6 +165,7 @@ public:
   const CallStack &get_call_stack() const { return _call_stack; }
 
 private:
+  std::unique_ptr<VMApi> _vm;
   State _state;
   CallStack _call_stack;
 };
