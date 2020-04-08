@@ -52,6 +52,7 @@ struct RegInfos {
   std::string name;
   vm_size_t size;
   RegKind kind;
+  std::vector<std::uint8_t> val;
 };
 
 struct SymbolInfos {

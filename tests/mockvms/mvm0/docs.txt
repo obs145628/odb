@@ -1,0 +1,70 @@
+
+# Memory
+
+(in bytes)
+0000-1023 RAM (RW-)
+1024-2047 ROM (--X) (instructions)
+
+RAM zeo-initialized
+Trying exec code in RAM, Read/Write in ROM, or accessing >= 2048 provoque a SEGV
+
+
+# Registers
+
+(all 32 bits)
+- 16 general purpose: r0-r14, and sp
+- pc
+- zf (zero flag)
+
+- ro-r14, zf 0-initialized
+- sp initialized to 1024
+- pc initialized to 1024 (first ROM ins)
+
+stack grows down.
+
+# Calling convention
+
+Functions have 0-4 parameters, in r0 to r3
+Return value in r0
+Callee can do whatever it wants with R0-R14, but must keep sp / stack above the same
+
+# Instructions
+
+All imediates are 32 bits unsigned
+Registers are r0-r14 and sp
+
+mov <rsrc> <rdst>  ; rdst <- rsrc
+movi <imm> <rdst>  ; rdts <- imm
+ldr <rptr> <rdst>  ; rdst <- *rptr
+str <rsrc> <rptr>  ; *rptr <- rsrc
+b <imm>            ; pc <- imm
+bz <imm>           ; if (zf == 1) pc <- imm
+bn <imm>           ; if (zf == 0) pc <- imm
+call <imm>         ; sp <- sp - 4, *sp <- pc + 1, pc <- imm
+ret                ; pc <- *sp, sp <- sp + 4
+sys <imm>          ; r0 <- syscall(imm, r0...r4)
+add <ra> <rb> <rx> ; rx <- ra + rb
+sub <ra> <rb> <rx> ; rx <- ra - rb
+mul <ra> <rb> <rx> ; rx <- ra * rb
+div <ra> <rb> <rx> ; rx <- ra / rb
+mod <ra> <rb> <rx> ; rx <- ra % rb
+and <ra> <rb> <rx> ; rx <- ra & rb
+or <ra> <rb> <rx>  ; rx <- ra | rb
+xor <ra> <rb> <rx> ; rx <- ra ^ rb
+shl <ra> <rb> <rx> ; rx <- ra << rb
+shr <ra> <rb> <rx> ; rx <- ra >> rb
+
+Instructions have no opcode (reading ROM from debugguer gives 0)
+They all take 1 bytes in memory
+All ins describer after sys are data operations, they set zf to 1 if rx == 0,
+or zf to 0 otherwhise
+
+# Sycalls
+
+0: exit program
+
+# Assembly syntax
+
+List of instructions
+To define a symbol, use '@' <name> in line above instruction (alone)
+Imeddiates operands can be symbols ('@' <name>). Replaced by symbol address

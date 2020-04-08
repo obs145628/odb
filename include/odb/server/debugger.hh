@@ -95,7 +95,7 @@ public:
   RegInfos get_reg_infos(vm_reg_t idx);
 
   /// Returns a register id given its name
-  vm_reg_t find_reg_id(const char *name);
+  vm_reg_t find_reg_id(const std::string &name);
 
   /// Total number of registers available
   /// This may be a huge number for machines with infinite (or almost) number of
@@ -105,7 +105,9 @@ public:
   /// List all registers of a specific kind
   /// For infinite or very high number of general purpose registers, they aren't
   /// listed
-  std::vector<vm_reg_t> list_regs(RegKind kind);
+  /// Returns a reference to a private member
+  /// Remains valid for the whole Debugger lifetime
+  const std::vector<vm_reg_t> &list_regs(RegKind kind);
 
   /// Read `size` bytes of data from `addr` and store in `out_buf`
   void read_mem(vm_ptr_t addr, vm_size_t size, std::uint8_t *out_buf);
@@ -135,6 +137,11 @@ public:
   /// .word)
   /// If the code contains a reference to a symbol, it's written '{symbol_idx}'
   std::string get_code_text(vm_ptr_t addr, vm_size_t &addr_dist);
+
+  /// Returns the address of the next instruction to be executed
+  /// This may differ from PC on some VMs that have different fetch, decode,
+  /// exec cycles
+  vm_ptr_t get_execution_point();
 
   /// Put a breakpoint at `addr`, no matter if this address is reachable
   /// Throws an error if there is already a breakpoint

@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "ins.hh"
+#include "rom.hh"
 
 namespace mvm0 {
 

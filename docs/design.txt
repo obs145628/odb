@@ -7,7 +7,7 @@
 
 - src/mess: All codebase related to message passing between client and server,
   running on both sides
-
+p
 # Server Side (Emulator / VM)
 
 ## Execution Flow
@@ -60,3 +60,29 @@ His simple role is to wait for a client to connect, read commands from input,
 parse and use Debugger API, then send back result to client.
 Generic interface.
 Many implem for different client types: TCP, Websockets, Pipe, stdin
+
+
+
+## Callback API
+
+get_reg (idx, out_reg_ptr, bool only_vals)
+set_reg As API
+find_reg_id: As API
+
+read_mem: As API
+write_mem: As API
+
+vector get_syms(addr, sire)
+get_sym_infos(idx, out_sym_ptr)
+find_sym_id: As API
+get_code_text: As API
+Initialization info:
+
+- registers_count
+- list_regs
+- get_memory_size
+- symbols_count
+
+At each step
+
+- get_execution_point
