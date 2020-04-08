@@ -1,0 +1,14 @@
+@_begin
+	b @_start
+
+@my_add
+	add r0 r1 r1
+	ret
+
+@_start
+	movi 12 r0
+	movi 45 r1
+	call @my_add
+	mov r0 r10
+	mov 0 r0
+	sys 0

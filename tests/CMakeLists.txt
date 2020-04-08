@@ -11,3 +11,5 @@ add_custom_target(todo
   COMMAND
   ${CMAKE_SOURCE_DIR}/extern/obdev/bin/obdev todo ${CMAKE_SOURCE_DIR}
 )
+
+add_subdirectory(mockvms/mvm0)
