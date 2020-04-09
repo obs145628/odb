@@ -12,8 +12,10 @@
 
 #pragma once
 
+#include "../utils/range-map.hh"
 #include "fwd.hh"
 #include "vm-api.hh"
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -166,8 +168,24 @@ public:
 
 private:
   std::unique_ptr<VMApi> _vm;
+  VMInfos _infos;
   State _state;
   CallStack _call_stack;
+  vm_ptr_t _ins_addr;
+
+  // @TIP Implem based on the fact that all symbols have different names
+  // May not be always true for all VMs ?
+
+  std::map<vm_reg_t, RegInfos> _map_regs;
+  std::map<std::string, vm_reg_t> _smap_regs;
+
+  std::map<vm_sym_t, SymbolInfos> _map_syms;
+  std::map<std::string, vm_sym_t> _smap_syms;
+  std::unique_ptr<RangeMap<int>> _syms_ranges;
+
+  // Make sure all symbols in [addr, addr + size[ are in _map_syms
+  // Use a range-based map to known which part of the memory need to be loaded
+  void _preload_symbols(vm_sym_t addr, vm_sym_t size);
 };
 
 } // namespace odb
