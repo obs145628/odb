@@ -18,3 +18,4 @@ add_subdirectory(tests)
 
 add_subdirectory(src/mess)
 add_subdirectory(src/server)
+add_subdirectory(src/utils)
