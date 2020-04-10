@@ -16,8 +16,9 @@ Debugger::Debugger(std::unique_ptr<VMApi> &&vm)
 }
 
 void Debugger::on_init() {
+  assert(_state == State::NOT_STARTED);
   // 1) get general VM infos
-  _state = State::RUNNING;
+  _state = State::RUNNING_TOFINISH;
   _infos = _vm->get_vm_infos();
   _syms_ranges = std::make_unique<RangeMap<int>>(0, _infos.memory_size - 1, 0);
 
@@ -36,12 +37,55 @@ void Debugger::on_init() {
 }
 
 void Debugger::on_update() {
+  assert(_state == State::NOT_STARTED && _state != State::STOPPED &&
+         _state != State::ERROR && _state != State::EXIT);
+
   auto udp = _vm->get_update_infos();
-  if (udp.state == VMApi::UpdateState::ERROR)
+  if (udp.state == VMApi::UpdateState::ERROR) {
     _state = State::ERROR;
-  else if (udp.state == VMApi::UpdateState::EXIT)
+    return;
+  }
+  if (udp.state == VMApi::UpdateState::EXIT) {
     _state = State::EXIT;
-  // @TODO other states
+    return;
+  }
+
+  auto old_addr = _ins_addr;
+  _ins_addr = udp.act_addr;
+
+  if (udp.state == VMApi::UpdateState::CALL_SUB) {
+    _call_stack.back().call_addr = old_addr;
+    CallInfos new_call;
+    new_call.caller_start_addr = _ins_addr;
+    _call_stack.push_back(new_call);
+  } else if (udp.state == VMApi::UpdateState::RET_SUB) {
+    assert(!_call_stack.empty());
+    _call_stack.pop_back();
+  }
+
+  if (_state == State::RUNNING_TOFINISH) {
+    return;
+  }
+
+  if (_state == State::RUNNING_STEP) {
+    _state = State::STOPPED;
+    return;
+  }
+
+  if (_state == State::RUNNING_STEP_OVER &&
+      _step_over_depth == _call_stack.size()) {
+    _state = State::STOPPED;
+    return;
+  }
+
+  if (_state == State::RUNNING_STEP_OUT &&
+      udp.state == VMApi::UpdateState::RET_SUB) {
+    _state = State::STOPPED;
+    return;
+  }
+
+  if (_breakpts.find(_ins_addr) != _breakpts.end())
+    _state = State::STOPPED;
 }
 
 void Debugger::_preload_symbols(vm_ptr_t addr, vm_size_t size) {
@@ -84,6 +128,57 @@ void Debugger::_load_symbol(vm_sym_t id) {
   _map_syms.emplace(id, infos);
   _smap_syms.emplace(infos.name, id);
   _syms_pos.emplace(infos.addr, id);
+}
+
+vm_ptr_t Debugger::get_execution_point() { return _ins_addr; }
+
+void Debugger::add_breakpoint(vm_ptr_t addr) {
+  if (addr >= _infos.memory_size)
+    throw VMApi::Error(
+        "cannot add breakpoint: address outside of memory range");
+  if (!_breakpts.insert(addr).second)
+    throw VMApi::Error(
+        "cannot add breakpoint: There is already one at this address");
+}
+
+bool Debugger::has_breakpoint(vm_ptr_t addr) {
+  if (addr >= _infos.memory_size)
+    throw VMApi::Error(
+        "cannot get breakpoint: address outside of memory range");
+  return _breakpts.find(addr) != _breakpts.end();
+}
+
+void Debugger::del_breadkpoint(vm_ptr_t addr) {
+  if (addr >= _infos.memory_size)
+    throw VMApi::Error(
+        "cannot delete breakpoint: address outside of memory range");
+  if (_breakpts.erase(addr) == 0)
+    throw VMApi::Error(
+        "cannot delete breakpoint: there is none at this address");
+}
+
+void Debugger::resume(ResumeType type) {
+  if (_state == State::EXIT || _state == State::ERROR)
+    throw VMApi::Error("cannot resume execution: program already finished");
+
+  if (type == ResumeType::ToFinish)
+    _state = State::RUNNING_TOFINISH;
+  else if (type == ResumeType::Continue)
+    _state = State::RUNNING_BKP;
+  else if (type == ResumeType::Step)
+    _state = State::RUNNING_STEP;
+  else if (type == ResumeType::StepOver)
+    _state = State::RUNNING_STEP_OVER;
+  else if (type == ResumeType::StepOut)
+    _state = State::RUNNING_STEP_OUT;
+}
+
+void Debugger::stop() {
+  assert(_state != State::NOT_STARTED);
+  if (_state == State::EXIT || _state == State::ERROR)
+    throw VMApi::Error("cannot stop execution: program already finished");
+  if (_state == State::STOPPED)
+    throw VMApi::Error("cannot stop execution: program already stopped");
 }
 
 } // namespace odb
