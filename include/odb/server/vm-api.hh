@@ -61,7 +61,8 @@ public:
   virtual UpdateInfos get_update_infos() = 0;
 
   /// Store informations about register of id `idx` in `infos`
-  /// If `val_only` is true, only update the `val` field
+  /// If `val_only` is true, only update the val field
+  /// Otherwhise, update everything but val field
   virtual void get_reg(vm_reg_t idx, RegInfos &infos, bool val_only) = 0;
 
   /// Change the value of register `idx`

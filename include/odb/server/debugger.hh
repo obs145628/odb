@@ -110,7 +110,7 @@ public:
   /// listed
   /// Returns a reference to a private member
   /// Remains valid for the whole Debugger lifetime
-  const std::vector<vm_reg_t> &list_regs(RegKind kind);
+  const std::vector<vm_reg_t> &list_regs(RegKind kind) const;
 
   /// Read `size` bytes of data from `addr` and store in `out_buf`
   void read_mem(vm_ptr_t addr, vm_size_t size, std::uint8_t *out_buf);
@@ -199,6 +199,10 @@ private:
   std::set<vm_ptr_t> _breakpts;
   std::size_t
       _step_over_depth; // to be able to stop a the right subroutine return
+
+  // Load all informations concerning a register in the data members
+  // Does nothing if already loaded
+  void _load_reg(vm_reg_t id);
 
   // Make sure all symbols in [addr, addr + size[ are in _map_syms
   // Use a range-based map to known which part of the memory need to be loaded
