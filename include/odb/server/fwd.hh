@@ -25,6 +25,8 @@ using vm_size_t = std::uint64_t;
 using vm_ssize_t = std::int64_t;
 using vm_sym_t = std::uint32_t; // symbol index
 
+constexpr vm_size_t VM_SYM_NULL = static_cast<vm_sym_t>(-1);
+
 enum class RegKind {
   general,
   program_counter,

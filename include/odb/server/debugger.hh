@@ -54,9 +54,7 @@ public:
   struct CallInfos {
     vm_ptr_t
         caller_start_addr; // Address of the subroutine where the call is made
-    vm_sym_t
-        caller_sym; // Symbol of the caller subroutine, or -1 if doesn't have
-    vm_ptr_t call_addr; // Address of the instruction that made the call
+    vm_ptr_t call_addr;    // Address of the instruction that made the call
   };
 
   using CallStack = std::vector<CallInfos>;
@@ -115,6 +113,10 @@ public:
 
   /// Get full memory size
   vm_size_t get_memory_size();
+
+  /// @returns symbol id of symbol def located at `addr`
+  /// Returns VM_SYM_NULL if no symbol found
+  vm_sym_t get_symbol_at(vm_ptr_t addr);
 
   /// Returns all symbols defined in [`addr`, `addr` + `size`[
   std::vector<vm_sym_t> get_symbols(vm_ptr_t addr, vm_size_t size);
@@ -182,10 +184,18 @@ private:
   std::map<vm_sym_t, SymbolInfos> _map_syms;
   std::map<std::string, vm_sym_t> _smap_syms;
   std::unique_ptr<RangeMap<int>> _syms_ranges;
+  std::map<vm_ptr_t, vm_sym_t> _syms_pos;
 
   // Make sure all symbols in [addr, addr + size[ are in _map_syms
   // Use a range-based map to known which part of the memory need to be loaded
-  void _preload_symbols(vm_sym_t addr, vm_sym_t size);
+  void _preload_symbols(vm_ptr_t addr, vm_size_t size);
+
+  // Call preload_symbols, but with `addr` in the middle range
+  void _preload_symbols(vm_ptr_t addr);
+
+  /// Load all informations concerning a symbol in the data members
+  /// Does nothing is already loaded
+  void _load_symbol(vm_sym_t id);
 };
 
 } // namespace odb

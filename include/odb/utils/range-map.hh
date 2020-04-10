@@ -85,6 +85,8 @@ RangeMap<T>::RangeMap(std::size_t min_key, std::size_t max_key, const T &val)
 }
 
 template <class T> const T &RangeMap<T>::get(std::size_t key) const {
+  assert(key >= _min_key);
+  assert(key <= _max_key);
   return _find_node(key)->val;
 }
 
@@ -119,6 +121,8 @@ void RangeMap<T>::set(std::size_t low, std::size_t high, const T &val) {
 
 template <class T>
 typename RangeMap<T>::Range RangeMap<T>::range_of(std::size_t key) const {
+  assert(key >= _min_key);
+  assert(key <= _max_key);
   auto it = _find_node(key);
   auto next = it + 1;
   auto end_key = next == _ranges.cend() ? _max_key : next->beg_key - 1;
