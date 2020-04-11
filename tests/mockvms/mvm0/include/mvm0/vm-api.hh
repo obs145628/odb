@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <odb/server/vm-api.hh>
 
 #pragma once
@@ -33,6 +34,8 @@ public:
 
 private:
   CPU &_cpu;
+
+  std::uint32_t *_reg_ptr(odb::vm_reg_t idx);
 };
 
 } // namespace mvm0

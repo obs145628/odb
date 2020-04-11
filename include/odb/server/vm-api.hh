@@ -93,6 +93,7 @@ public:
   /// This may be used to read instruction, but also data directives (eg .byte,
   /// .word)
   /// If the code contains a reference to a symbol, it's written '{symbol_idx}'
+  /// Returns an empty string if there is no code or the opcode is invalid
   virtual std::string get_code_text(vm_ptr_t addr, vm_size_t &addr_dist) = 0;
 };
 
