@@ -12,7 +12,7 @@ Trying exec code in RAM, Read/Write in ROM, or accessing >= 2048 provoque a SEGV
 # Registers
 
 (all 32 bits)
-- 16 general purpose: r0-r14, and sp
+- 16 general purpose: r0-r14, and sp (only those can be accessed directly)
 - pc
 - zf (zero flag)
 

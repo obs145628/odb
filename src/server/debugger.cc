@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include <iostream>
+
 namespace odb {
 
 namespace {
@@ -38,7 +40,7 @@ void Debugger::on_init() {
 }
 
 void Debugger::on_update() {
-  assert(_state == State::NOT_STARTED && _state != State::STOPPED &&
+  assert(_state != State::NOT_STARTED && _state != State::STOPPED &&
          _state != State::ERROR && _state != State::EXIT);
 
   auto udp = _vm->get_update_infos();
@@ -92,7 +94,7 @@ void Debugger::on_update() {
 void Debugger::get_reg(vm_reg_t idx, std::uint8_t *val) {
   // @EXTRA add caching system to avoid reloading the register every time
   _load_reg(idx);
-  auto &infos = _map_regs[idx];
+  auto &infos = _map_regs.find(idx)->second;
   _vm->get_reg(idx, infos, true);
   std::copy_n(&infos.val[0], infos.size, val);
 }
@@ -103,7 +105,7 @@ void Debugger::set_reg(vm_reg_t idx, const std::uint8_t *new_val) {
 
 RegInfos Debugger::get_reg_infos(vm_reg_t idx) {
   _load_reg(idx);
-  return _map_regs[idx];
+  return _map_regs.find(idx)->second;
 }
 
 vm_reg_t Debugger::find_reg_id(const std::string &name) {
@@ -122,7 +124,7 @@ const std::vector<vm_reg_t> &Debugger::list_regs(RegKind kind) const {
   if (kind == RegKind::general)
     return _infos.regs_general;
   else if (kind == RegKind::program_counter)
-    return _infos.regs_general;
+    return _infos.regs_program_counter;
   else if (kind == RegKind::stack_pointer)
     return _infos.regs_stack_pointer;
   else if (kind == RegKind::base_pointer)
@@ -219,11 +221,12 @@ void Debugger::resume(ResumeType type) {
     _state = State::RUNNING_TOFINISH;
   else if (type == ResumeType::Continue)
     _state = State::RUNNING_BKP;
-  else if (type == ResumeType::Step)
+  else if (type == ResumeType::Step) {
     _state = State::RUNNING_STEP;
-  else if (type == ResumeType::StepOver)
+  } else if (type == ResumeType::StepOver) {
     _state = State::RUNNING_STEP_OVER;
-  else if (type == ResumeType::StepOut)
+    _step_over_depth = _call_stack.size();
+  } else if (type == ResumeType::StepOut)
     _state = State::RUNNING_STEP_OUT;
 }
 
@@ -236,10 +239,11 @@ void Debugger::stop() {
 }
 
 void Debugger::_load_reg(vm_reg_t id) {
+
   if (_map_regs.find(id) != _map_regs.end())
     return;
 
-  auto &infos = _map_regs[id];
+  RegInfos infos;
   _vm->get_reg(id, infos, false);
   infos.val.resize(infos.size);
   _map_regs.emplace(id, infos);

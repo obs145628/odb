@@ -1,6 +1,7 @@
 #include "../include/mvm0/cpu.hh"
 
 #include <cassert>
+#include <cstring>
 
 namespace {
 
@@ -34,9 +35,9 @@ int CPU::step() {
   }
 
   const auto &ins = _rom.ins[_pc - MEM_CODE_START];
-  auto a0 = ins.args[0];
-  auto a1 = ins.args[1];
-  auto a2 = ins.args[2];
+  auto a0 = ins.args.size() > 0 ? ins.args[0] : 0;
+  auto a1 = ins.args.size() > 1 ? ins.args[1] : 0;
+  auto a2 = ins.args.size() > 2 ? ins.args[2] : 0;
   auto pc_cpy = _pc;
 
   if (ins.name == "mov") {
@@ -119,6 +120,13 @@ int CPU::step() {
   return _status != Status::OK;
 }
 
+void CPU::read_ram(std::size_t addr, std::size_t size, void *out_buf) const {
+  assert(addr < MEM_CODE_START);
+  assert(addr + size <= MEM_CODE_START);
+  const std::uint8_t *ptr = &_ram[0] + addr;
+  std::memcpy(out_buf, ptr, size);
+}
+
 std::uint32_t &CPU::_reg(int idx) {
   auto sidx = static_cast<std::size_t>(idx);
   assert(sidx < BASE_REGS);
@@ -127,7 +135,7 @@ std::uint32_t &CPU::_reg(int idx) {
 
 std::uint32_t &CPU::_mem(int addr) {
   auto sptr = static_cast<std::size_t>(addr);
-  if (sptr > 1023) {
+  if (sptr >= MEM_CODE_START) {
     _status = Status::SEGV;
     return _guard;
   }

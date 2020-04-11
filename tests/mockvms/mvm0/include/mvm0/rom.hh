@@ -9,8 +9,9 @@ namespace mvm0 {
 constexpr std::size_t SYM_NONE = static_cast<std::size_t>(-1);
 
 struct Ins {
-  std::size_t def_sym; // symbol id If ins has a symbol, -1 otherwhise
-  std::size_t use_sym; // symbol id if one operand is a symbol, 0 otherwhise
+  std::size_t def_sym; // symbol id If ins has a symbol, SYM_NONE otherwhise
+  std::size_t
+      use_sym; // symbol id if one operand is a symbol, SYM_NONE otherwhise
   std::string name;
   std::vector<int> args;
 };

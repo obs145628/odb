@@ -60,14 +60,14 @@ ROM parse_is(std::istream &is) {
   std::size_t ins_idx = 0;
   std::size_t sym_idx = 0;
   std::string line;
+  std::string sym;
   while (std::getline(is, line, '\n')) {
-    std::string sym;
     line = str_trim(line);
     if (line.empty())
       continue;
 
     if (line[0] == '@') {
-      std::string sym = line.substr(1);
+      sym = line.substr(1);
       res.syms.push_back(sym);
       res.smap.emplace(sym, sym_idx++);
       res.sym_defs.push_back(ins_idx);
@@ -76,9 +76,11 @@ ROM parse_is(std::istream &is) {
     else {
       Ins ins;
       ins.name = line;
-      ins.def_sym = sym.empty() ? SYM_NONE : sym_idx;
+      ins.def_sym = sym.empty() ? SYM_NONE : sym_idx - 1;
       ins.use_sym = SYM_NONE;
       ++ins_idx;
+      res.ins.push_back(ins);
+      sym.clear();
     }
   }
 

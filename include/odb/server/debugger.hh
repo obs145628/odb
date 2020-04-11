@@ -54,6 +54,7 @@ public:
   };
 
   /// Create a debugger connected to a specific vm through a VMAPI instance
+  /// After initialization, start in RUNNING_TOFINISH mode
   Debugger(std::unique_ptr<VMApi> &&vm);
 
   Debugger(const Debugger &) = delete;

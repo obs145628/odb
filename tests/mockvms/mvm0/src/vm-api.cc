@@ -32,6 +32,7 @@ odb::VMInfos VMApi::get_vm_infos() {
   infos.regs_stack_pointer = {REG_SP};
   infos.regs_flags = {REG_ZF};
   infos.memory_size = MEM_SIZE;
+  infos.symbols_count = _cpu._rom.syms.size();
 
   return infos;
 }
@@ -80,8 +81,10 @@ void VMApi::get_reg(odb::vm_reg_t idx, odb::RegInfos &infos, bool val_only) {
   else {
     infos.idx = idx;
     infos.name = reg_names[idx];
-    if (idx < REG_PC) {
+    if (idx < REG_SP) {
       infos.kind = odb::RegKind::general;
+    } else if (idx == REG_SP) {
+      infos.kind = odb::RegKind::stack_pointer;
     } else if (idx == REG_PC) {
       infos.kind = odb::RegKind::program_counter;
     } else if (idx == REG_ZF) {
@@ -157,7 +160,10 @@ std::vector<odb::vm_sym_t> VMApi::get_symbols(odb::vm_ptr_t addr,
   std::vector<odb::vm_sym_t> res;
 
   for (auto it = addr; it < end; ++it) {
-    const auto &ins = _cpu._rom.ins[it - MEM_CODE_START];
+    auto idx = it - MEM_CODE_START;
+    if (idx >= _cpu._rom.ins.size())
+      break;
+    const auto &ins = _cpu._rom.ins[idx];
     if (ins.def_sym != SYM_NONE)
       res.push_back(ins.def_sym);
   }
@@ -193,20 +199,24 @@ std::string VMApi::get_code_text(odb::vm_ptr_t addr,
   if (addr < MEM_CODE_START)
     return "";
 
-  const auto &ins = _cpu._rom.ins[addr - MEM_CODE_START];
+  auto id = addr - MEM_CODE_START;
+  if (id >= _cpu._rom.ins.size())
+    return "";
+  const auto &ins = _cpu._rom.ins[id];
   std::ostringstream os;
 
   if (ins.name == "movi") {
-    os << "movi " << reg_names[ins.args[0]] << " ";
-    if (ins.use_sym)
+    os << "movi ";
+    if (ins.use_sym != SYM_NONE)
       os << "{" << ins.use_sym << "}";
     else
-      os << ins.args[1];
+      os << ins.args[0];
+    os << ' ' << reg_names[ins.args[1]];
   }
 
   else if (ins.name == "b") {
     os << "b ";
-    if (ins.use_sym)
+    if (ins.use_sym != SYM_NONE)
       os << "{" << ins.use_sym << "}";
     else
       os << ins.args[0];
@@ -214,7 +224,7 @@ std::string VMApi::get_code_text(odb::vm_ptr_t addr,
 
   else if (ins.name == "bz") {
     os << "bz ";
-    if (ins.use_sym)
+    if (ins.use_sym != SYM_NONE)
       os << _cpu._rom.syms[ins.use_sym];
     else
       os << ins.args[0];
@@ -222,7 +232,7 @@ std::string VMApi::get_code_text(odb::vm_ptr_t addr,
 
   else if (ins.name == "bn") {
     os << "bn ";
-    if (ins.use_sym)
+    if (ins.use_sym != SYM_NONE)
       os << "{" << ins.use_sym << "}";
     else
       os << ins.args[0];
@@ -230,7 +240,7 @@ std::string VMApi::get_code_text(odb::vm_ptr_t addr,
 
   else if (ins.name == "call") {
     os << "call ";
-    if (ins.use_sym)
+    if (ins.use_sym != SYM_NONE)
       os << "{" << ins.use_sym << "}";
     else
       os << ins.args[0];

@@ -32,6 +32,11 @@ public:
 
   Status status() const { return _status; }
 
+  std::uint32_t get_reg(std::size_t idx) const { return _regs[idx]; }
+  std::uint32_t get_pc() const { return _pc; }
+  std::uint32_t get_zf() const { return _zf; }
+  void read_ram(std::size_t addr, std::size_t size, void *out_buf) const;
+
 private:
   std::array<std::uint32_t, BASE_REGS> _regs;
   std::uint32_t _pc;
