@@ -20,6 +20,7 @@ void CPU::init() {
   std::fill(_regs.begin(), _regs.end(), 0);
   _regs[REG_SP] = 1024;
   _pc = 1024;
+  _prev_pc = 0;
   _zf = 0;
 }
 
@@ -36,6 +37,7 @@ int CPU::step() {
   auto a0 = ins.args[0];
   auto a1 = ins.args[1];
   auto a2 = ins.args[2];
+  auto pc_cpy = _pc;
 
   if (ins.name == "mov") {
     _reg(a1) = _reg(a0);
@@ -110,6 +112,9 @@ int CPU::step() {
   else {
     _status = Status::BAD_INS;
   }
+
+  if (_status == Status::OK)
+    _prev_pc = pc_cpy;
 
   return _status != Status::OK;
 }

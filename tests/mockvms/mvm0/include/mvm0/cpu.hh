@@ -9,6 +9,8 @@
 
 namespace mvm0 {
 
+class VMApi;
+
 class CPU {
 public:
   CPU(const ROM &rom);
@@ -33,6 +35,7 @@ public:
 private:
   std::array<std::uint32_t, BASE_REGS> _regs;
   std::uint32_t _pc;
+  std::uint32_t _prev_pc;
   std::uint32_t _zf;
   std::vector<std::uint8_t> _ram;
   std::uint32_t _guard; // returned memory access when SEGV
@@ -41,6 +44,8 @@ private:
 
   std::uint32_t &_reg(int idx);
   std::uint32_t &_mem(int addr);
+
+  friend class VMApi;
 };
 
 } // namespace mvm0
