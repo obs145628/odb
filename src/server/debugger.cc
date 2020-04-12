@@ -76,7 +76,7 @@ void Debugger::on_update() {
   }
 
   if (_state == State::RUNNING_STEP_OVER &&
-      _step_over_depth == _call_stack.size()) {
+      _step_over_depth >= _call_stack.size()) {
     _state = State::STOPPED;
     return;
   }
@@ -204,7 +204,7 @@ bool Debugger::has_breakpoint(vm_ptr_t addr) {
   return _breakpts.find(addr) != _breakpts.end();
 }
 
-void Debugger::del_breadkpoint(vm_ptr_t addr) {
+void Debugger::del_breakpoint(vm_ptr_t addr) {
   if (addr >= _infos.memory_size)
     throw VMApi::Error(
         "cannot delete breakpoint: address outside of memory range");

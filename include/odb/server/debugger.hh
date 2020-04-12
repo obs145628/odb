@@ -164,7 +164,7 @@ public:
   /// Delete the breakpoint at `addr` if there is one
   /// Throws an error if `adddr` outside of memory space or if there is no
   /// breakpoint
-  void del_breadkpoint(vm_ptr_t addr);
+  void del_breakpoint(vm_ptr_t addr);
 
   /// Resume program execution
   /// Throws if program finished

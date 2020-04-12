@@ -485,3 +485,184 @@ TEST_CASE("debug continue no bp", "") {
   REQUIRE(db_get_reg(db, 0) == 0);
   REQUIRE(db_get_reg(db, 10) == 57);
 }
+
+TEST_CASE("debug continue bkps", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_ADD);
+  odb::vm_size_t un;
+  CPU cpu(rom);
+  cpu.init();
+  odb::Debugger db(std::make_unique<VMApi>(cpu));
+  db.on_init();
+  db.add_breakpoint(1025);
+  db.add_breakpoint(1028);
+  db.add_breakpoint(1031);
+  db.add_breakpoint(1032);
+
+  db.add_breakpoint(0);
+  db.add_breakpoint(1023);
+  db.add_breakpoint(1024);
+  db.add_breakpoint(2047);
+  REQUIRE_THROWS(db.add_breakpoint(1028));
+  REQUIRE_THROWS(db.add_breakpoint(1032));
+  REQUIRE_THROWS(db.add_breakpoint(2048));
+  REQUIRE_THROWS(db.add_breakpoint(2049));
+  REQUIRE_THROWS(db.add_breakpoint(-1));
+
+  REQUIRE(db.has_breakpoint(1023));
+  REQUIRE(db.has_breakpoint(1024));
+  REQUIRE(db.has_breakpoint(1025));
+  REQUIRE(!db.has_breakpoint(1026));
+  db.del_breakpoint(1023);
+  REQUIRE(!db.has_breakpoint(1023));
+  REQUIRE_THROWS(db.del_breakpoint(1026));
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1028);
+  REQUIRE(db.get_code_text(1028, un) == "movi 45 r1");
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1025);
+  REQUIRE(db.get_code_text(1025, un) == "add r0 r1 r0");
+  REQUIRE(db_get_reg(db, 0) == 12);
+  REQUIRE(db_get_reg(db, 1) == 45);
+
+  db.del_breakpoint(1031);
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+  REQUIRE(db_get_reg(db, 0) == 0);
+  REQUIRE(db_get_reg(db, 10) == 57);
+  REQUIRE(db.get_state() != odb::Debugger::State::EXIT);
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_state() == odb::Debugger::State::EXIT);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+}
+
+TEST_CASE("debug call_add step_out bkps", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_ADD);
+  odb::vm_size_t un;
+  CPU cpu(rom);
+  cpu.init();
+  odb::Debugger db(std::make_unique<VMApi>(cpu));
+  db.on_init();
+  db.add_breakpoint(1025);
+  db.add_breakpoint(1026);
+  db.add_breakpoint(1032);
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1025);
+  REQUIRE(db.get_code_text(1025, un) == "add r0 r1 r0");
+  REQUIRE(db_get_reg(db, 0) == 12);
+  REQUIRE(db_get_reg(db, 1) == 45);
+
+  db_resume(db, cpu, odb::ResumeType::StepOut);
+  REQUIRE(db.get_execution_point() == 1026);
+  REQUIRE(db.get_code_text(1026, un) == "ret");
+  REQUIRE(db_get_reg(db, 0) == 57);
+  REQUIRE(db_get_reg(db, 1) == 45);
+
+  db_resume(db, cpu, odb::ResumeType::StepOut);
+  REQUIRE(db.get_execution_point() == 1030);
+  REQUIRE(db.get_code_text(1030, un) == "mov r0 r10");
+
+  db_resume(db, cpu, odb::ResumeType::StepOut);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+  REQUIRE(db_get_reg(db, 0) == 0);
+  REQUIRE(db_get_reg(db, 10) == 57);
+  REQUIRE(db.get_state() != odb::Debugger::State::EXIT);
+
+  db_resume(db, cpu, odb::ResumeType::StepOut);
+  REQUIRE(db.get_state() == odb::Debugger::State::EXIT);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+}
+
+TEST_CASE("debug call_add step_over bkps", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_ADD);
+  odb::vm_size_t un;
+  CPU cpu(rom);
+  cpu.init();
+  odb::Debugger db(std::make_unique<VMApi>(cpu));
+  db.on_init();
+  db.add_breakpoint(1029);
+  db.add_breakpoint(1026);
+  db.add_breakpoint(1032);
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1029);
+  REQUIRE(db.get_code_text(1029, un) == "call {1}");
+  REQUIRE(db_get_reg(db, 0) == 12);
+  REQUIRE(db_get_reg(db, 1) == 45);
+
+  db_resume(db, cpu, odb::ResumeType::StepOver);
+  REQUIRE(db.get_execution_point() == 1026);
+  REQUIRE(db.get_code_text(1026, un) == "ret");
+  REQUIRE(db_get_reg(db, 0) == 57);
+  REQUIRE(db_get_reg(db, 1) == 45);
+
+  db_resume(db, cpu, odb::ResumeType::StepOver);
+  REQUIRE(db.get_execution_point() == 1030);
+  REQUIRE(db.get_code_text(1030, un) == "mov r0 r10");
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+  REQUIRE(db_get_reg(db, 0) == 0);
+  REQUIRE(db_get_reg(db, 10) == 57);
+  REQUIRE(db.get_state() != odb::Debugger::State::EXIT);
+
+  db_resume(db, cpu, odb::ResumeType::StepOver);
+  REQUIRE(db.get_state() == odb::Debugger::State::EXIT);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+}
+
+TEST_CASE("debug call_add step bkps", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_ADD);
+  odb::vm_size_t un;
+  CPU cpu(rom);
+  cpu.init();
+  odb::Debugger db(std::make_unique<VMApi>(cpu));
+  db.on_init();
+  for (odb::vm_ptr_t it = 1024; it < 1056; ++it)
+    db.add_breakpoint(it);
+
+  db_resume(db, cpu, odb::ResumeType::Step);
+  REQUIRE(db.get_execution_point() == 1027);
+  REQUIRE(db.get_code_text(1027, un) == "movi 12 r0");
+
+  db_resume(db, cpu, odb::ResumeType::ToFinish);
+  REQUIRE(db.get_state() == odb::Debugger::State::EXIT);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+  REQUIRE(db_get_reg(db, 0) == 0);
+  REQUIRE(db_get_reg(db, 1) == 45);
+  REQUIRE(db_get_reg(db, 10) == 57);
+}
+
+TEST_CASE("debug call_add run_direct bkps", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_ADD);
+  odb::vm_size_t un;
+  CPU cpu(rom);
+  cpu.init();
+  odb::Debugger db(std::make_unique<VMApi>(cpu));
+  db.on_init();
+  for (odb::vm_ptr_t it = 1024; it < 1056; ++it)
+    db.add_breakpoint(it);
+
+  db_resume(db, cpu, odb::ResumeType::ToFinish);
+  REQUIRE(db.get_state() == odb::Debugger::State::EXIT);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+  REQUIRE(db_get_reg(db, 0) == 0);
+  REQUIRE(db_get_reg(db, 1) == 45);
+  REQUIRE(db_get_reg(db, 10) == 57);
+}
