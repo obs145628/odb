@@ -1,4 +1,4 @@
-//===-- server/fwd.hh - Forward definitions --------------------*- C++//-*-===//
+//===-- server/fwd.hh - Forward definitions ---------------------*- C++ -*-===//
 //
 // ODB Library
 // Author: Steven Lariau
@@ -26,6 +26,7 @@ using vm_ssize_t = std::int64_t;
 using vm_sym_t = std::uint32_t; // symbol index
 
 constexpr vm_size_t VM_SYM_NULL = static_cast<vm_sym_t>(-1);
+constexpr vm_sym_t SYM_ID_NONE = static_cast<vm_sym_t>(-1);
 
 enum class RegKind {
   general,
@@ -86,7 +87,5 @@ struct VMInfos {
 };
 
 class Debugger;
-
-constexpr vm_sym_t SYM_ID_NONE = static_cast<vm_sym_t>(-1);
 
 } // namespace odb

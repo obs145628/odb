@@ -1,4 +1,4 @@
-//===-- server/debugger.hh - Debugger class definition ---------*- C++//-*-===//
+//===-- server/debugger.hh - Debugger class definition ----------*- C++ -*-===//
 //
 // ODB Library
 // Author: Steven Lariau
