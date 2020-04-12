@@ -55,8 +55,10 @@ DebuguerLoop (call to next_ins / terminate)
 
 The class that implements all of the debugging logics.
 Receive `commands` through basic method calls (eg: get_reg, read_mem)
-State: NOT_STARTED, STOPED, RUNNING, TERMINATED
 Also tell if the program should exec next intruction or wait for a command to tell it to do so.
+With `ODB_SERVER_DB_LOG` defined, it writes to `./odb_server_db.logs`
+every step that happened with the VM and the debugguer.
+Really useful to find bugs
 
 ## ClientHandler
 
@@ -72,7 +74,3 @@ Many implem for different client types: TCP, Websockets, Pipe, stdin
 Abstract class, to query and edit VM state.
 Need to be implemented for a VM to work with ODB.
 This class it what makes possible to have a generic debugguer for any kind of VM.
-
-At each step
-
-- get_execution_point

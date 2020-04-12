@@ -10,6 +10,7 @@ add_library(mock_mvm0 ${SRC})
 set(TEST_SRC
   tests/test_main.cc
   tests/test_server_db.cc
+  tests/test_server_db_fact.cc
 )
 set(TEST_NAME utest_mockvms_mvm0.bin)
 add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC})

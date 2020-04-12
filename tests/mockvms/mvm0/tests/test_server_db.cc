@@ -1,11 +1,4 @@
-#include <catch2/catch.hpp>
-
-#include "../include/mvm0/cpu.hh"
-#include "../include/mvm0/parser.hh"
-#include "../include/mvm0/rom.hh"
-#include "../include/mvm0/vm-api.hh"
-
-#include <odb/server/debugger.hh>
+#include "utils.hh"
 
 #define PATH_CALL_ADD (MVM0_EXS_DIR + std::string("call_add.vv"))
 
@@ -17,33 +10,11 @@ std::uint32_t read_u32(const mvm0::CPU &cpu, std::size_t addr) {
   return res;
 }
 
-std::uint32_t db_get_reg(odb::Debugger &db, odb::vm_reg_t idx) {
-  std::uint32_t res;
-  db.get_reg(idx, reinterpret_cast<std::uint8_t *>(&res));
-  return res;
-}
-
-std::uint32_t db_read_u32(odb::Debugger &db, std::size_t addr) {
-  std::uint32_t res;
-  db.read_mem(addr, 4, reinterpret_cast<std::uint8_t *>(&res));
-  return res;
-}
-
 void db_step(odb::Debugger &db, mvm0::CPU &cpu) {
   db.resume(odb::ResumeType::Step);
   REQUIRE(cpu.step() == 0);
   db.on_update();
   REQUIRE(db.get_state() == odb::Debugger::State::STOPPED);
-}
-
-void db_resume(odb::Debugger &db, mvm0::CPU &cpu, odb::ResumeType type) {
-  db.resume(type);
-  while (db.get_state() != odb::Debugger::State::EXIT &&
-         db.get_state() != odb::Debugger::State::ERROR &&
-         db.get_state() != odb::Debugger::State::STOPPED) {
-    cpu.step();
-    db.on_update();
-  }
 }
 
 } // namespace
@@ -665,4 +636,62 @@ TEST_CASE("debug call_add run_direct bkps", "") {
   REQUIRE(db_get_reg(db, 0) == 0);
   REQUIRE(db_get_reg(db, 1) == 45);
   REQUIRE(db_get_reg(db, 10) == 57);
+}
+
+TEST_CASE("debug call_add run_direct change reg", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_ADD);
+  odb::vm_size_t un;
+  CPU cpu(rom);
+  cpu.init();
+  odb::Debugger db(std::make_unique<VMApi>(cpu));
+  db.on_init();
+
+  db.add_breakpoint(1025);
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1025);
+  REQUIRE(db.get_code_text(1025, un) == "add r0 r1 r0");
+  REQUIRE(db_get_reg(db, 0) == 12);
+  REQUIRE(db_get_reg(db, 1) == 45);
+  db_set_reg(db, 0, 19);
+  REQUIRE(db_get_reg(db, 0) == 19);
+  REQUIRE(db_get_reg(db, 1) == 45);
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_state() == odb::Debugger::State::EXIT);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+  REQUIRE(db_get_reg(db, 0) == 0);
+  REQUIRE(db_get_reg(db, 1) == 45);
+  REQUIRE(db_get_reg(db, 10) == 64);
+}
+
+TEST_CASE("debug call_add run_direct change ret addr", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_ADD);
+  odb::vm_size_t un;
+  CPU cpu(rom);
+  cpu.init();
+  odb::Debugger db(std::make_unique<VMApi>(cpu));
+  db.on_init();
+
+  db.add_breakpoint(1025);
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_execution_point() == 1025);
+  REQUIRE(db.get_code_text(1025, un) == "add r0 r1 r0");
+  REQUIRE(db_get_reg(db, 0) == 12);
+  REQUIRE(db_get_reg(db, 1) == 45);
+  db.del_breakpoint(1025);
+  REQUIRE(db_get_reg(db, 15) == 1020);
+  REQUIRE(db_read_u32(db, 1020) == 1030);
+  db_write_u32(db, 1020, 1029); // set ret addr to call @my_add
+  REQUIRE(db_read_u32(db, 1020) == 1029);
+
+  db_resume(db, cpu, odb::ResumeType::Continue);
+  REQUIRE(db.get_state() == odb::Debugger::State::EXIT);
+  REQUIRE(db.get_execution_point() == 1032);
+  REQUIRE(db.get_code_text(1032, un) == "sys 0");
+  REQUIRE(db_get_reg(db, 0) == 0);
+  REQUIRE(db_get_reg(db, 1) == 45);
+  REQUIRE(db_get_reg(db, 10) == 102);
 }

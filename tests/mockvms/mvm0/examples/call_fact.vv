@@ -1,0 +1,34 @@
+@_begin
+	b @_start
+
+@fact
+	mov r0 r2
+	movi 1 r1
+	sub r0 r1 r0
+	bz @fact_base
+	b @fact_rec
+
+@fact_base
+	movi 1 r0
+	b @fact_end
+
+@fact_rec
+	movi 4 r1
+	sub sp r1 sp
+	str r2 sp
+	call @fact
+	ldr sp r2
+	movi 4 r1
+	add sp r1 sp
+	mul r0 r2 r0
+	b @fact_end
+
+@fact_end
+	ret
+
+@_start
+	movi 4 r0
+	call @fact
+	mov r0 r10
+	movi 0 r0
+	sys 0

@@ -225,7 +225,7 @@ std::string VMApi::get_code_text(odb::vm_ptr_t addr,
   else if (ins.name == "bz") {
     os << "bz ";
     if (ins.use_sym != SYM_NONE)
-      os << _cpu._rom.syms[ins.use_sym];
+      os << "{" << ins.use_sym << "}";
     else
       os << ins.args[0];
   }

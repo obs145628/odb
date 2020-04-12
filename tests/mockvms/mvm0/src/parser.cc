@@ -43,6 +43,8 @@ int parse_arg(const std::string &val, const ROM &code, Ins &ins) {
     return std::atoi(val.c_str());
   if (val[0] == 'r')
     return std::atoi(val.c_str() + 1);
+  else if (val == "sp")
+    return 15;
 
   assert(val[0] == '@');
   auto it = code.smap.find(val.substr(1));

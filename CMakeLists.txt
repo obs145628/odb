@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(odb)
 
+# Create log file for odb server
+add_definitions(-DODB_SERVER_DB_LOG)
+
 include_directories(SYSTEM "./extern/Catch2/single_include/")
 include_directories("./include/")
 

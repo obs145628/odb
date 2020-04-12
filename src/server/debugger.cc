@@ -5,6 +5,109 @@
 
 #include <iostream>
 
+#ifdef ODB_SERVER_DB_LOG
+#include <fstream>
+#endif
+
+#ifdef ODB_SERVER_DB_LOG
+
+#define CASE_PRINT_ENUM(Enum, Val)                                             \
+  case Enum::Val:                                                              \
+    os << #Val;                                                                \
+    break
+
+namespace {
+
+std::ostream &log_os() {
+  static std::ofstream os("./odb_server_db.logs");
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const odb::Debugger::State &st) {
+  switch (st) {
+    CASE_PRINT_ENUM(odb::Debugger::State, NOT_STARTED);
+    CASE_PRINT_ENUM(odb::Debugger::State, STOPPED);
+    CASE_PRINT_ENUM(odb::Debugger::State, RUNNING_TOFINISH);
+    CASE_PRINT_ENUM(odb::Debugger::State, RUNNING_BKP);
+    CASE_PRINT_ENUM(odb::Debugger::State, RUNNING_STEP);
+    CASE_PRINT_ENUM(odb::Debugger::State, RUNNING_STEP_OVER);
+    CASE_PRINT_ENUM(odb::Debugger::State, RUNNING_STEP_OUT);
+    CASE_PRINT_ENUM(odb::Debugger::State, ERROR);
+    CASE_PRINT_ENUM(odb::Debugger::State, EXIT);
+  }
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const odb::ResumeType &t) {
+  switch (t) {
+    CASE_PRINT_ENUM(odb::ResumeType, ToFinish);
+    CASE_PRINT_ENUM(odb::ResumeType, Continue);
+    CASE_PRINT_ENUM(odb::ResumeType, Step);
+    CASE_PRINT_ENUM(odb::ResumeType, StepOver);
+    CASE_PRINT_ENUM(odb::ResumeType, StepOut);
+  }
+  return os;
+}
+
+void dump_regs_list(std::ostream &os, const char *name,
+                    const std::vector<odb::vm_reg_t> &regs) {
+  if (regs.empty())
+    return;
+  os << "    " << name << ": ";
+
+  for (std::size_t i = 0; i < regs.size(); ++i) {
+    if (i > 0)
+      os << ", ";
+    os << regs[i];
+  }
+  os << "\n";
+}
+
+std::ostream &operator<<(std::ostream &os, const odb::VMInfos &infos) {
+  os << "\n<======= VM INFOS:\n";
+  os << "  name: " << infos.name << "\n";
+  os << "  registers count: " << infos.regs_count << "\n";
+  dump_regs_list(os, "general", infos.regs_general);
+  dump_regs_list(os, "program counter", infos.regs_program_counter);
+  dump_regs_list(os, "stack pointer", infos.regs_stack_pointer);
+  dump_regs_list(os, "base pointer", infos.regs_base_pointer);
+  dump_regs_list(os, "flags", infos.regs_flags);
+  os << "  memory size: " << infos.memory_size << "\n";
+  os << "  symbols count: " << infos.symbols_count << "\n";
+
+  os << " VM INFOS =======>\n\n";
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const odb::VMApi::UpdateState &st) {
+  switch (st) {
+    CASE_PRINT_ENUM(odb::VMApi::UpdateState, ERROR);
+    CASE_PRINT_ENUM(odb::VMApi::UpdateState, EXIT);
+    CASE_PRINT_ENUM(odb::VMApi::UpdateState, CALL_SUB);
+    CASE_PRINT_ENUM(odb::VMApi::UpdateState, RET_SUB);
+    CASE_PRINT_ENUM(odb::VMApi::UpdateState, OK);
+  }
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const odb::VMApi::UpdateInfos &udp) {
+  return os << "update: " << udp.state << ", addr: " << udp.act_addr;
+}
+
+} // namespace
+
+#define DB_LOG(Mes) (log_os() << Mes << std::endl)
+#define DB_LOG_UPDATE(Mess)                                                    \
+  DB_LOG("on_update(): " << Mess << ": " << udp << ", old_state: "             \
+                         << __log_old_state << ", new_state: " << _state)
+
+#else
+
+#define DB_LOG(Mes)
+#define DB_LOG_UPDATE(Mess)
+
+#endif
+
 namespace odb {
 
 namespace {
@@ -20,9 +123,12 @@ Debugger::Debugger(std::unique_ptr<VMApi> &&vm)
 
 void Debugger::on_init() {
   assert(_state == State::NOT_STARTED);
+
   // 1) get general VM infos
   _state = State::RUNNING_TOFINISH;
+  DB_LOG("vm.get_vm_infos()");
   _infos = _vm->get_vm_infos();
+  DB_LOG(_infos);
   _syms_ranges = std::make_unique<RangeMap<int>>(0, _infos.memory_size - 1, 0);
 
   // 2) Get extra usefull informations
@@ -30,6 +136,7 @@ void Debugger::on_init() {
   // @EXTRA get all symbols if count below a threshold
 
   // 3) Get entry point and init stack frame
+  DB_LOG("vm.get_update_infos()");
   auto upd = _vm->get_update_infos();
   assert(upd.state == VMApi::UpdateState::OK);
   _ins_addr = upd.act_addr;
@@ -37,19 +144,27 @@ void Debugger::on_init() {
   CallInfos start;
   start.caller_start_addr = _ins_addr;
   _call_stack.push_back(start);
+
+  DB_LOG("on_init(): addr = " << _ins_addr << ", state = " << _state);
 }
 
 void Debugger::on_update() {
   assert(_state != State::NOT_STARTED && _state != State::STOPPED &&
          _state != State::ERROR && _state != State::EXIT);
+#ifdef ODB_SERVER_DB_LOG
+  auto __log_old_state = _state;
+#endif
 
+  DB_LOG("vm.get_update_infos()");
   auto udp = _vm->get_update_infos();
   if (udp.state == VMApi::UpdateState::ERROR) {
     _state = State::ERROR;
+    DB_LOG_UPDATE("VM Error");
     return;
   }
   if (udp.state == VMApi::UpdateState::EXIT) {
     _state = State::EXIT;
+    DB_LOG("on_update(): addr = " << _ins_addr << ", state = " << _state);
     return;
   }
 
@@ -67,39 +182,49 @@ void Debugger::on_update() {
   }
 
   if (_state == State::RUNNING_TOFINISH) {
+    DB_LOG_UPDATE("nostop");
     return;
   }
 
   if (_state == State::RUNNING_STEP) {
     _state = State::STOPPED;
+    DB_LOG_UPDATE("step stop");
     return;
   }
 
   if (_state == State::RUNNING_STEP_OVER &&
       _step_over_depth >= _call_stack.size()) {
     _state = State::STOPPED;
+    DB_LOG_UPDATE("step_over stop");
     return;
   }
 
   if (_state == State::RUNNING_STEP_OUT &&
       udp.state == VMApi::UpdateState::RET_SUB) {
     _state = State::STOPPED;
+    DB_LOG_UPDATE("step_out stop");
     return;
   }
 
-  if (_breakpts.find(_ins_addr) != _breakpts.end())
+  if (_breakpts.find(_ins_addr) != _breakpts.end()) {
+    DB_LOG("trigger breakpoint " << _ins_addr);
     _state = State::STOPPED;
+  }
+
+  DB_LOG_UPDATE("_");
 }
 
 void Debugger::get_reg(vm_reg_t idx, std::uint8_t *val) {
   // @EXTRA add caching system to avoid reloading the register every time
   _load_reg(idx);
   auto &infos = _map_regs.find(idx)->second;
+  DB_LOG("vm.get_reg(" << idx << ", infos, true)");
   _vm->get_reg(idx, infos, true);
   std::copy_n(&infos.val[0], infos.size, val);
 }
 
 void Debugger::set_reg(vm_reg_t idx, const std::uint8_t *new_val) {
+  DB_LOG("vm.set_reg(" << idx << ", " << (void *)new_val << ")");
   _vm->set_reg(idx, new_val);
 }
 
@@ -113,6 +238,7 @@ vm_reg_t Debugger::find_reg_id(const std::string &name) {
   if (it != _smap_regs.end())
     return it->second;
 
+  DB_LOG("vm.find_reg_id(" << name << ")");
   auto id = _vm->find_reg_id(name);
   _load_reg(id);
   return id;
@@ -136,11 +262,14 @@ const std::vector<vm_reg_t> &Debugger::list_regs(RegKind kind) const {
 }
 
 void Debugger::read_mem(vm_ptr_t addr, vm_size_t size, std::uint8_t *out_buf) {
+  DB_LOG("vm.read_mem(" << addr << ", " << size << ", " << (void *)out_buf
+                        << ")");
   _vm->read_mem(addr, size, out_buf);
 }
 
 void Debugger::write_mem(vm_ptr_t addr, vm_size_t size,
                          const std::uint8_t *buf) {
+  DB_LOG("vm.write_mem(" << addr << ", " << size << ", " << (void *)buf << ")");
   _vm->write_mem(addr, size, buf);
 }
 
@@ -176,6 +305,7 @@ SymbolInfos Debugger::get_symbol_infos(vm_sym_t idx) {
 vm_sym_t Debugger::symbols_count() { return _infos.symbols_count; }
 
 vm_sym_t Debugger::find_sym_id(const std::string &name) {
+  DB_LOG("vm.find_sym_id(" << name << ")");
   auto id = _vm->find_sym_id(name);
   _load_symbol(id);
   return id;
@@ -183,12 +313,15 @@ vm_sym_t Debugger::find_sym_id(const std::string &name) {
 
 std::string Debugger::get_code_text(vm_ptr_t addr, vm_size_t &addr_dist) {
   // @EXTRA: cache result and/or be able to load more than one at once
+  DB_LOG("vm.get_code_text(" << addr << ", "
+                             << "addr_dist)");
   return _vm->get_code_text(addr, addr_dist);
 }
 
 vm_ptr_t Debugger::get_execution_point() { return _ins_addr; }
 
 void Debugger::add_breakpoint(vm_ptr_t addr) {
+  DB_LOG("add breakpoint(" << addr << ")");
   if (addr >= _infos.memory_size)
     throw VMApi::Error(
         "cannot add breakpoint: address outside of memory range");
@@ -205,6 +338,7 @@ bool Debugger::has_breakpoint(vm_ptr_t addr) {
 }
 
 void Debugger::del_breakpoint(vm_ptr_t addr) {
+  DB_LOG("del breakpoint(" << addr << ")");
   if (addr >= _infos.memory_size)
     throw VMApi::Error(
         "cannot delete breakpoint: address outside of memory range");
@@ -214,6 +348,7 @@ void Debugger::del_breakpoint(vm_ptr_t addr) {
 }
 
 void Debugger::resume(ResumeType type) {
+  DB_LOG("resume(" << type << ")");
   if (_state == State::EXIT || _state == State::ERROR)
     throw VMApi::Error("cannot resume execution: program already finished");
 
@@ -231,6 +366,7 @@ void Debugger::resume(ResumeType type) {
 }
 
 void Debugger::stop() {
+  DB_LOG("stop()");
   assert(_state != State::NOT_STARTED);
   if (_state == State::EXIT || _state == State::ERROR)
     throw VMApi::Error("cannot stop execution: program already finished");
@@ -244,6 +380,7 @@ void Debugger::_load_reg(vm_reg_t id) {
     return;
 
   RegInfos infos;
+  DB_LOG("vm.get_ret(" << id << ", infos, false)");
   _vm->get_reg(id, infos, false);
   infos.val.resize(infos.size);
   _map_regs.emplace(id, infos);
@@ -270,6 +407,7 @@ void Debugger::_preload_symbols(vm_ptr_t addr, vm_size_t size) {
   }
 
   size = end - addr + 1;
+  DB_LOG("vm.get_symbols(" << addr << ", " << size << ")");
   auto syms = _vm->get_symbols(addr, size);
   _syms_ranges->set(addr, end, 1);
   for (const auto &s : syms)
@@ -286,6 +424,7 @@ void Debugger::_load_symbol(vm_sym_t id) {
   if (_map_syms.find(id) != _map_syms.end())
     return;
 
+  DB_LOG("vm.get_symb_infos(" << id << ")");
   auto infos = _vm->get_symb_infos(id);
   _map_syms.emplace(id, infos);
   _smap_syms.emplace(infos.name, id);

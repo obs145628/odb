@@ -80,33 +80,43 @@ int CPU::step() {
     ++_pc;
   } else if (ins.name == "add") {
     _reg(a2) = _reg(a0) + _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "sub") {
     _reg(a2) = _reg(a0) - _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "mul") {
     _reg(a2) = _reg(a0) * _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "div") {
     _reg(a2) = _reg(a0) / _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "mod") {
     _reg(a2) = _reg(a0) % _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "and") {
     _reg(a2) = _reg(a0) & _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "or") {
     _reg(a2) = _reg(a0) | _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "xor") {
     _reg(a2) = _reg(a0) ^ _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "shl") {
     _reg(a2) = _reg(a0) >> _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   } else if (ins.name == "shr") {
     _reg(a2) = _reg(a0) << _reg(a1);
+    _zf = _reg(a2) == 0;
     ++_pc;
   }
 
