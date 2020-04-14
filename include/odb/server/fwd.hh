@@ -28,12 +28,26 @@ using vm_sym_t = std::uint32_t; // symbol index
 constexpr vm_size_t VM_SYM_NULL = static_cast<vm_sym_t>(-1);
 constexpr vm_sym_t SYM_ID_NONE = static_cast<vm_sym_t>(-1);
 
+struct CallInfos {
+  vm_ptr_t
+      caller_start_addr; // Address of the subroutine where the call is made
+  vm_ptr_t call_addr;    // Address of the instruction that made the call
+};
+
+using CallStack = std::vector<CallInfos>;
+
 enum class RegKind {
   general,
   program_counter,
   stack_pointer,
   base_pointer,
   flags,
+};
+
+enum class StoppedState {
+  READY, // Program ready to execute next instruction
+  EXIT,  // Program exited
+  ERROR, // Program aborted because of an error
 };
 
 enum class ResumeType {

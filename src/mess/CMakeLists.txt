@@ -1,4 +1,5 @@
 set(SRC
+  db-client.cc
   request.cc
   response.cc
 )

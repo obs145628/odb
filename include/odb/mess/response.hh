@@ -1,4 +1,4 @@
-//===-- mess/response.hh - Response struct definition ----------*- C++//-*-===//
+//===-- mess/response.hh - Response struct definition -----------*- C++ -*-===//
 //
 // ODB Library
 // Author: Steven Lariau

@@ -19,4 +19,10 @@ namespace odb {
 struct Request;
 struct Response;
 
+class DBClient;
+class DBClientImpl;
+struct DBClientUpdate;
+
+using db_client_req_t = int;
+
 } // namespace odb

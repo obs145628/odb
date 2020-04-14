@@ -59,14 +59,6 @@ public:
 
   Debugger(const Debugger &) = delete;
 
-  struct CallInfos {
-    vm_ptr_t
-        caller_start_addr; // Address of the subroutine where the call is made
-    vm_ptr_t call_addr;    // Address of the instruction that made the call
-  };
-
-  using CallStack = std::vector<CallInfos>;
-
   /// This function must be called right before the execution of the first
   /// instruction, when the VM is completely setup and ready to start execution
   /// It get all the general VM infos (nb regs, memory size, etc), and the

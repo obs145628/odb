@@ -88,12 +88,12 @@ typedef odb_vm_reg_t (*odb_vm_api_find_reg_id_f)(odb_vm_api_data_t data,
 // Must store result in `out_buf`
 typedef void (*odb_vm_api_read_mem_f)(odb_vm_api_data_t data,
                                       odb_vm_api_error_t *err,
-                                      odb_vm_ptr_t addr, odb_vm_ptr_t size,
+                                      odb_vm_ptr_t addr, odb_vm_size_t size,
                                       void *out_buf);
 
 typedef void (*odb_vm_api_write_mem_f)(odb_vm_api_data_t data,
                                        odb_vm_api_error_t *err,
-                                       odb_vm_ptr_t addr, odb_vm_ptr_t size,
+                                       odb_vm_ptr_t addr, odb_vm_size_t size,
                                        const void *buf);
 
 // Store result in `out_syms,
@@ -123,9 +123,10 @@ typedef odb_vm_sym_t (*odb_vm_api_find_sym_id_f)(odb_vm_api_data_t data,
 // Store result in `out_text`
 //   must not store more than `ODB_VM_API_TEXT_INS_CAP` bytes, '\0' included
 // Store addr offset in `out_addr_dist`
-typedef odb_vm_reg_t (*odb_vm_api_get_code_text_f)(
-    odb_vm_api_data_t data, odb_vm_api_error_t *err, odb_vm_ptr_t addr,
-    char *out_text, odb_vm_size_t *out_addr_dist);
+typedef void (*odb_vm_api_get_code_text_f)(odb_vm_api_data_t data,
+                                           odb_vm_api_error_t *err,
+                                           odb_vm_ptr_t addr, char *out_text,
+                                           odb_vm_size_t *out_addr_dist);
 
 // Called when the VMApi object is destroyed
 // To release all used ressources
