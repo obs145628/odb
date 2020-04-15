@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "../server/fwd.hh"
 #include "fwd.hh"
 
@@ -50,6 +52,8 @@ public:
     VM_STOPPED,
     VM_RUNNING,
   };
+
+  DBClient(std::unique_ptr<DBClientImpl> &&impl);
 
   State state() const { return _state; }
 
@@ -208,6 +212,7 @@ public:
   vm_sym_t symbols_count();
 
 private:
+  std::unique_ptr<DBClientImpl> _impl;
   State _state;
   DBClientUpdate _udp;
   VMInfos _vm_infos;

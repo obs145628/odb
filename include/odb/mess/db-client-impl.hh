@@ -22,6 +22,7 @@ namespace odb {
 
 class DBClientImpl {
 public:
+  DBClientImpl() = default;
   DBClientImpl(const DBClientImpl &) = delete;
   virtual ~DBClientImpl() = default;
 

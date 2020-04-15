@@ -168,6 +168,10 @@ public:
 
   State get_state() const { return _state; }
 
+  /// Return static informations about the VM
+  /// Doesn't change during execution
+  const VMInfos &get_vm_infos() const { return _infos; }
+
   // Current Call stack
   // The last element is about the function currently running, and call_addr is
   // garbage data

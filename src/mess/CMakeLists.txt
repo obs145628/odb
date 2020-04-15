@@ -2,6 +2,7 @@ set(SRC
   db-client.cc
   request.cc
   response.cc
+  simple-cli-client.cc
 )
 add_library(odb_mess ${SRC})
 
