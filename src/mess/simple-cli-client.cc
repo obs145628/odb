@@ -383,7 +383,7 @@ std::string SimpleCLIClient::_cmd_preg() {
 
   std::ostringstream os;
   for (std::size_t i = 0; i < ids.size(); ++i) {
-    os << _cmd[i + 1] << ": ";
+    os << _cmd[i + 2] << ": ";
     print_val(os, &buffer[i * len], ty);
     os << "\n";
   }
@@ -422,6 +422,174 @@ std::string SimpleCLIClient::_cmd_sreg() {
 
   _env.set_regs(&ids[0], (const char **)&buf_ptrs[0], regs_size, ids.size());
   return "";
+}
+
+std::string SimpleCLIClient::_cmd_pregi() {
+  if (_cmd.size() < 2)
+    throw VMApi::Error("pregi: missing arguments");
+
+  std::vector<RegVariant> regs;
+  for (std::size_t i = 1; i < _cmd.size(); ++i)
+    regs.push_back(r_reg(_cmd[i]));
+  resolve_regs(_env, regs);
+
+  std::vector<vm_reg_t> ids;
+  for (const auto &r : regs)
+    ids.push_back(r.reg_id);
+  std::vector<RegInfos> infos(ids.size());
+  _env.get_regs_infos(&ids[0], &infos[0], ids.size());
+
+  std::ostringstream os;
+  for (std::size_t i = 0; i < ids.size(); ++i) {
+    const auto &inf = infos[1];
+    os << _cmd[i + 1] << ": ";
+    os << "{"
+       << "id: " << inf.idx << ", name: " << inf.name << ", size: " << inf.size
+       << "}\n";
+  }
+
+  return os.str();
+}
+
+std::string SimpleCLIClient::_cmd_pmem() {
+  if (_cmd.size() != 4)
+    throw VMApi::Error("pmem: missing arguments");
+
+  auto ty = type_desc_parse(_cmd[1]);
+  auto ty_len = type_desc_size(ty);
+  std::size_t nb_items = parse_int(_cmd[3], false);
+  vm_size_t buff_size = nb_items * ty_len;
+  std::vector<char> buff(buff_size);
+  char *buff_ptr = &buff[0];
+
+  // Read address
+  std::vector<ValueVariant> vals = {r_value(_cmd[2])};
+  resolve_vals(_env, vals);
+  if (vals[0].type != VALUE_IVAL || vals[0].ival < 0)
+    throw VMApi::Error("pmem: invalid address `" + _cmd[2] + "'");
+  vm_ptr_t addr = vals[0].ival;
+
+  _env.read_mem(&addr, &buff_size, &buff_ptr, 1);
+
+  std::ostringstream os;
+  for (std::size_t i = 0; i < nb_items; ++i) {
+    print_val(os, &buff[i * ty_len], ty);
+    os << " ";
+  }
+
+  return os.str();
+}
+
+std::string SimpleCLIClient::_cmd_smem() {
+  if (_cmd.size() < 4)
+    throw VMApi::Error("smem: missing arguments");
+
+  auto ty = type_desc_parse(_cmd[1]);
+  auto ty_len = type_desc_size(ty);
+  std::size_t nb_items = _cmd.size() - 2;
+  vm_size_t buff_size = nb_items * ty_len;
+  std::vector<char> buff(buff_size);
+  const char *buff_ptr = &buff[0];
+
+  // Read address and values
+  std::vector<ValueVariant> vals;
+  for (std::size_t i = 2; i < _cmd.size(); ++i)
+    vals.push_back(r_value(_cmd[i]));
+  resolve_vals(_env, vals);
+
+  // Find address
+  if (vals[0].type != VALUE_IVAL || vals[0].ival < 0)
+    throw VMApi::Error("smem: invalid address `" + _cmd[2] + "'");
+  vm_ptr_t addr = vals[0].ival;
+
+  // Load values to buffer
+  for (std::size_t i = 0; i < nb_items; ++i)
+    load_val(&buff[i * ty_len], vals[i + 1], ty);
+
+  _env.write_mem(&addr, &buff_size, &buff_ptr, 1);
+  return "";
+}
+
+std::string SimpleCLIClient::_cmd_psym() {
+  if (_cmd.size() != 2)
+    throw VMApi::Error("psym: missing arguments");
+
+  // Read symbol infos
+  auto val = r_value(_cmd[1]);
+  SymbolInfos infos;
+  if (val.type == VALUE_SYM_ID)
+    _env.get_symbols_by_ids(&val.sym_id, &infos, 1);
+  else if (val.type == VALUE_SYM_NAME)
+    _env.get_symbols_by_names(&val.sym_name, &infos, 1);
+  else
+    throw VMApi::Error("psym: argument '" + _cmd[1] + "' not a symbol");
+
+  std::ostringstream os;
+  os << "{"
+     << "id: " << infos.idx << ", name: " << infos.name
+     << ", addr: " << infos.addr << "}\n";
+  return os.str();
+}
+
+std::string SimpleCLIClient::_cmd_code() {
+  // Get raw code
+  vm_ptr_t addr = _env.get_execution_point();
+  std::size_t n = _cmd.size() < 2 ? 3 : parse_int(_cmd[1], false);
+  addr = addr < n ? 0 : addr - n;
+  std::size_t nins = 2 * n + 1;
+  vm_size_t code_size;
+  std::vector<std::string> raw_code;
+  _env.get_code_text(addr, nins, code_size, raw_code);
+
+  // Find and load references
+  std::vector<vm_sym_t> refs;
+  std::vector<std::array<std::size_t, 3>> ref_pos;
+  for (std::size_t i = 0; i < raw_code.size(); ++i) {
+    const auto &l = raw_code[i];
+    std::size_t pos = 0;
+    while (pos < l.size()) {
+
+      pos = l.find(pos, '{');
+      if (pos == std::string::npos)
+        break;
+      std::size_t beg_pos = pos;
+      ++pos;
+      if (l[pos] < '0' || l[pos] > '9')
+        continue;
+      vm_sym_t id = 0;
+      while (l[pos] >= '0' && l[pos] <= '9')
+        id = 10 * id + (l[pos++] - '0');
+      if (l[pos] != '}')
+        continue;
+
+      ++pos;
+      refs.push_back(id);
+      ref_pos.push_back({i, beg_pos, pos});
+    }
+  }
+
+  std::vector<SymbolInfos> syms_infos(refs.size());
+  _env.get_symbols_by_ids(&refs[0], &syms_infos[0], refs.size());
+
+  // Create string code
+  std::ostringstream os;
+  std::size_t ref_i = 0;
+  for (std::size_t i = 0; i < raw_code.size(); ++i) {
+    const auto &l = raw_code[i];
+    std::size_t off = 0;
+
+    while (ref_i < refs.size() && ref_pos[ref_i][0] == i) {
+      os << l.substr(off, ref_pos[ref_i][1] - off);
+      os << syms_infos[ref_i].name;
+      off = ref_pos[ref_i][2];
+      ++ref_i;
+    }
+
+    if (off < l.size())
+      os << l.substr(off);
+    os << "\n";
+  }
+  return os.str();
 }
 
 } // namespace odb
