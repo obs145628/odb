@@ -592,4 +592,117 @@ std::string SimpleCLIClient::_cmd_code() {
   return os.str();
 }
 
+std::string SimpleCLIClient::_cmd_b() {
+  if (_cmd.size() != 2)
+    throw VMApi::Error("b: missing arguments");
+
+  // Read address
+  std::vector<ValueVariant> vals = {r_value(_cmd[1])};
+  resolve_vals(_env, vals);
+  if (vals[0].type != VALUE_IVAL || vals[0].ival < 0)
+    throw VMApi::Error("b: invalid address `" + _cmd[1] + "'");
+  vm_ptr_t addr = vals[0].ival;
+
+  _env.add_breakpoints(&addr, 1);
+
+  std::ostringstream os;
+  os << "Inserted breakpoint at `0x" << std::hex << addr << "'\n";
+  return os.str();
+}
+
+std::string SimpleCLIClient::_cmd_delb() {
+  if (_cmd.size() != 2)
+    throw VMApi::Error("delb: missing arguments");
+
+  // Read address
+  std::vector<ValueVariant> vals = {r_value(_cmd[1])};
+  resolve_vals(_env, vals);
+  if (vals[0].type != VALUE_IVAL || vals[0].ival < 0)
+    throw VMApi::Error("delb: invalid address `" + _cmd[1] + "'");
+  vm_ptr_t addr = vals[0].ival;
+
+  _env.del_breakpoints(&addr, 1);
+
+  std::ostringstream os;
+  os << "Removed breakpoint at `0x" << std::hex << addr << "'\n";
+  return os.str();
+}
+
+#if 0
+  enum class ResumeType {
+  ToFinish, // run program until exit or crash, ignoring all breakpoints
+  Continue, // run until next breakpoint
+  Step, // run the next instruction
+  StepOver, // run next instruction, if it's a call, keep running until
+  StepOut, // run instructions until returning from current subroutine, or stop
+};
+#endif
+std::string SimpleCLIClient::_cmd_run() {
+  _env.resume(ResumeType::Continue);
+  return "";
+}
+
+std::string SimpleCLIClient::_cmd_step() {
+  _env.resume(ResumeType::Step);
+  return "";
+}
+
+std::string SimpleCLIClient::_cmd_next() {
+  _env.resume(ResumeType::StepOver);
+  return "";
+}
+
+std::string SimpleCLIClient::_cmd_fin() {
+  _env.resume(ResumeType::StepOut);
+  return "";
+}
+
+std::string SimpleCLIClient::_cmd_state() {
+  std::ostringstream os;
+  auto pos = _env.get_execution_point();
+  auto st = _env.get_stopped_state();
+  os << "Program stopped at 0x" << std::hex << pos << "\n";
+
+  if (st == StoppedState::EXIT)
+    os << "Program already exited.\n";
+  else if (st == StoppedState::ERROR)
+    os << "Program crasher from an error.\n";
+
+  return os.str();
+}
+
+std::string SimpleCLIClient::_cmd_bt() {
+  auto cs = _env.get_call_stack();
+  auto curr = _env.get_execution_point();
+
+  // Read symbols
+  std::vector<SymbolInfos> syms(syms.size());
+  for (std::size_t i = 0; i < cs.size(); ++i) {
+    std::vector<SymbolInfos> sym;
+    auto addr = cs[i].caller_start_addr;
+    _env.get_symbols_by_addr(addr, 1, sym);
+    if (sym.empty())
+      syms[i].idx = VM_SYM_NULL;
+    else
+      syms[i] = sym.front();
+  }
+
+  std::ostringstream os;
+  for (std::size_t i = cs.size() - 1; i < cs.size(); --i) {
+    auto pos = i + 1 == cs.size() ? curr : cs[i].call_addr;
+    auto beg_pos = cs[i].caller_start_addr;
+    auto off = pos - beg_pos;
+    os << "0x" << std::hex << pos << " (";
+    if (syms[i].idx == VM_SYM_NULL)
+      os << "0x" << std::hex << beg_pos;
+    else
+      os << "<" << syms[i].name << ">";
+    os << " + 0x" << std::hex << off << ")\n";
+  }
+
+  return os.str();
+}
+
+std::string _cmd_vm();
+
 } // namespace odb
