@@ -703,6 +703,17 @@ std::string SimpleCLIClient::_cmd_bt() {
   return os.str();
 }
 
-std::string _cmd_vm();
+std::string SimpleCLIClient::_cmd_vm() {
+  auto reg_count = _env.registers_count();
+  auto mem_size = _env.memory_size();
+  auto sym_count = _env.symbols_count();
+
+  std::ostringstream os;
+  os << "VM :\n";
+  os << "Registers: " << reg_count << ".\n";
+  os << "   Memory: " << mem_size << ".\n";
+  os << "  Symbols: " << sym_count << ".\n";
+  return os.str();
+}
 
 } // namespace odb
