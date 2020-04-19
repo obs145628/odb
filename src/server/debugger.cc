@@ -372,6 +372,7 @@ void Debugger::stop() {
     throw VMApi::Error("cannot stop execution: program already finished");
   if (_state == State::STOPPED)
     throw VMApi::Error("cannot stop execution: program already stopped");
+  _state = State::STOPPED;
 }
 
 void Debugger::_load_reg(vm_reg_t id) {

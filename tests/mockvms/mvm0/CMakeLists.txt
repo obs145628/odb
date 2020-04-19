@@ -7,6 +7,12 @@ set(SRC
 )
 add_library(mock_mvm0 ${SRC})
 
+set(APP_SRC
+  src/main.cc
+)
+add_executable(mock-mvm0-app ${APP_SRC})
+target_link_libraries(mock-mvm0-app mock_mvm0 odb_server)
+
 set(TEST_SRC
   tests/test_main.cc
   tests/test_server_db.cc

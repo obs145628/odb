@@ -100,6 +100,8 @@ struct VMInfos {
   vm_sym_t symbols_count;
 };
 
+class ClientHandler;
 class Debugger;
+class VMApi;
 
 } // namespace odb

@@ -13,6 +13,11 @@
 
 #pragma once
 
+#include <functional>
+#include <memory>
+
+#include "client-handler.hh"
+#include "debugger.hh"
 #include "fwd.hh"
 
 namespace odb {
@@ -27,6 +32,8 @@ namespace odb {
 /// - with env variables that can override config values
 class ServerApp {
 public:
+  using api_builder_f = std::function<std::unique_ptr<VMApi>()>;
+
   struct Config {
     // If true, the debugger is running
     // default is false
@@ -40,7 +47,37 @@ public:
     bool nostart;
   };
 
+  /// `api_builder` is a functor called when needed to build the debugger core
+  /// It is never called if the debugger isn't enabled
+  ServerApp(const Config &conf, const api_builder_f &api_builder);
+
+  /// Instantiate with default config
+  ServerApp(const api_builder_f &api_builder);
+
+  ServerApp(const ServerApp &) = delete;
+
+  /// Enter the debugger loop
+  /// Must be called right before executing each instruction
+  /// More infos in `docs/design.txt`
+  void loop();
+
 private:
+  Config _conf;
+  api_builder_f _api_builder;
+  std::unique_ptr<Debugger> _db;
+  std::unique_ptr<ClientHandler> _client;
+
+  // init debugger
+  void _init();
+
+  // block until `_client` connected
+  void _connect();
+
+  // returns true if db stopped (breakpoint, or exit/crash)
+  bool _db_is_stopped();
+
+  // Stop debugger if not stopped already
+  void _stop_db();
 };
 
 } // namespace odb

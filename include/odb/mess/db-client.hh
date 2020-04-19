@@ -153,7 +153,7 @@ public:
   void get_symbols_by_names(const char **names, SymbolInfos *out_infos,
                             std::size_t nsyms);
 
-  /// Get infos about many symbols given their names
+  /// Get string representation of code
   /// @param addr VM address where to start getting codes
   /// @param nins number of instructions that need to be decoded
   /// @param out_code_size will contain the number of bytes decoded

@@ -1,5 +1,6 @@
 #include "odb/mess/simple-cli-client.hh"
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <sstream>
@@ -109,7 +110,7 @@ double parse_double(const std::string &str) {
 void print_val(std::ostream &os, const char *buff, TypeDesc ty) {
   switch (ty) {
   case TypeDesc::u8:
-    os << *reinterpret_cast<const std::uint8_t *>(buff);
+    os << static_cast<int>(*reinterpret_cast<const std::uint8_t *>(buff));
     break;
   case TypeDesc::u16:
     os << *reinterpret_cast<const std::uint16_t *>(buff);
@@ -121,7 +122,7 @@ void print_val(std::ostream &os, const char *buff, TypeDesc ty) {
     os << *reinterpret_cast<const std::uint64_t *>(buff);
     break;
   case TypeDesc::i8:
-    os << *reinterpret_cast<const std::int8_t *>(buff);
+    os << static_cast<int>(*reinterpret_cast<const std::int8_t *>(buff));
     break;
   case TypeDesc::i16:
     os << *reinterpret_cast<const std::int16_t *>(buff);
@@ -228,12 +229,12 @@ ValueVariant r_value(const std::string &s) {
   }
 
   try {
-    res.dval = parse_double(s);
-    res.type = VALUE_DVAL;
-    return res;
-  } catch (...) {
     res.ival = parse_int(s, true);
     res.type = VALUE_IVAL;
+    return res;
+  } catch (...) {
+    res.dval = parse_double(s);
+    res.type = VALUE_DVAL;
     return res;
   }
 }
@@ -287,7 +288,7 @@ void resolve_vals(DBClient &db, std::vector<ValueVariant> &vv) {
 
   if (names.size() != 0) {
     std::vector<SymbolInfos> syms(names.size());
-    db.get_symbols_by_names(&names[0], &syms[0], ids.size());
+    db.get_symbols_by_names(&names[0], &syms[0], names.size());
 
     std::size_t i = 0;
     for (auto &v : vv)
@@ -400,9 +401,9 @@ std::string SimpleCLIClient::_cmd_sreg() {
 
   std::vector<RegVariant> regs;
   std::vector<ValueVariant> vals;
-  for (std::size_t i = 2; i < _cmd.size(); ++i) {
+  for (std::size_t i = 2; i < _cmd.size(); i += 2) {
     regs.push_back(r_reg(_cmd[i]));
-    vals.push_back(r_value(_cmd[i]));
+    vals.push_back(r_value(_cmd[i + 1]));
   }
 
   resolve_regs(_env, regs);
@@ -441,11 +442,26 @@ std::string SimpleCLIClient::_cmd_pregi() {
 
   std::ostringstream os;
   for (std::size_t i = 0; i < ids.size(); ++i) {
-    const auto &inf = infos[1];
-    os << _cmd[i + 1] << ": ";
-    os << "{"
-       << "id: " << inf.idx << ", name: " << inf.name << ", size: " << inf.size
-       << "}\n";
+    const auto &inf = infos[i];
+    os << "Register " << inf.name << " (#" << inf.idx << "):\n";
+    switch (inf.kind) {
+    case RegKind::general:
+      os << "  General purpose register\n";
+      break;
+    case RegKind::program_counter:
+      os << "  Program counter\n";
+      break;
+    case RegKind::stack_pointer:
+      os << "  Stack pointer\n";
+      break;
+    case RegKind::base_pointer:
+      os << "  Base pointer\n";
+      break;
+    case RegKind::flags:
+      os << "  Flags register\n";
+      break;
+    }
+    os << "  size: " << inf.size << " bytes\n";
   }
 
   return os.str();
@@ -525,21 +541,40 @@ std::string SimpleCLIClient::_cmd_psym() {
     throw VMApi::Error("psym: argument '" + _cmd[1] + "' not a symbol");
 
   std::ostringstream os;
-  os << "{"
-     << "id: " << infos.idx << ", name: " << infos.name
-     << ", addr: " << infos.addr << "}\n";
+  os << "Symbol " << infos.name << " (#" << infos.idx << "):\n"
+     << "  address: 0x" << std::hex << infos.addr << "\n";
   return os.str();
 }
 
 std::string SimpleCLIClient::_cmd_code() {
   // Get raw code
-  vm_ptr_t addr = _env.get_execution_point();
+  vm_ptr_t act_addr = _env.get_execution_point();
+  vm_ptr_t addr = act_addr;
   std::size_t n = _cmd.size() < 2 ? 3 : parse_int(_cmd[1], false);
   addr = addr < n ? 0 : addr - n;
   std::size_t nins = 2 * n + 1;
-  vm_size_t code_size;
+
   std::vector<std::string> raw_code;
-  _env.get_code_text(addr, nins, code_size, raw_code);
+  std::vector<vm_ptr_t> code_addrs;
+
+  // @TODO use one call to get_code_text instead of many
+  //_env.get_code_text(addr, nins, code_size, raw_code);
+  vm_ptr_t next_addr = addr;
+  for (std::size_t i = 0; i < nins; ++i) {
+    vm_size_t ins_size;
+    std::vector<std::string> ins_text;
+    _env.get_code_text(next_addr, 1, ins_size, ins_text);
+    assert(ins_text.size() == 1);
+
+    raw_code.push_back(ins_text[0]);
+    code_addrs.push_back(next_addr);
+    next_addr += ins_size;
+  }
+
+  // Load symbol definitions
+  std::vector<SymbolInfos> sym_defs;
+  _env.get_symbols_by_addr(
+      code_addrs.front(), code_addrs.back() - code_addrs.front() + 1, sym_defs);
 
   // Find and load references
   std::vector<vm_sym_t> refs;
@@ -549,7 +584,7 @@ std::string SimpleCLIClient::_cmd_code() {
     std::size_t pos = 0;
     while (pos < l.size()) {
 
-      pos = l.find(pos, '{');
+      pos = l.find('{', pos);
       if (pos == std::string::npos)
         break;
       std::size_t beg_pos = pos;
@@ -574,9 +609,31 @@ std::string SimpleCLIClient::_cmd_code() {
   // Create string code
   std::ostringstream os;
   std::size_t ref_i = 0;
+  std::size_t def_i = 0;
+  bool first = true;
   for (std::size_t i = 0; i < raw_code.size(); ++i) {
     const auto &l = raw_code[i];
     std::size_t off = 0;
+
+    if (def_i < sym_defs.size() && sym_defs[def_i].addr == code_addrs[i]) {
+      if (!first)
+        os << "\n";
+      os << "   0" << std::hex << code_addrs[i] << " <" << sym_defs[def_i].name
+         << ">:\n";
+      ++def_i;
+    }
+
+    if (l.empty())
+      continue;
+
+    first = false;
+
+    if (code_addrs[i] == act_addr)
+      os << " -> ";
+    else
+      os << "    ";
+
+    os << std::hex << code_addrs[i] << ":    ";
 
     while (ref_i < refs.size() && ref_pos[ref_i][0] == i) {
       os << l.substr(off, ref_pos[ref_i][1] - off);
@@ -661,13 +718,26 @@ std::string SimpleCLIClient::_cmd_state() {
   std::ostringstream os;
   auto pos = _env.get_execution_point();
   auto st = _env.get_stopped_state();
-  os << "Program stopped at 0x" << std::hex << pos << "\n";
 
   if (st == StoppedState::EXIT)
-    os << "Program already exited.\n";
+    os << "Program exited normally at ";
   else if (st == StoppedState::ERROR)
-    os << "Program crasher from an error.\n";
+    os << "Program stopped from an error at ";
+  else
+    os << "program stopped at ";
 
+  os << "0x" << std::hex << pos;
+
+  auto cs = _env.get_call_stack();
+  auto sub_addr = cs.back().caller_start_addr;
+  std::vector<SymbolInfos> syms;
+  _env.get_symbols_by_addr(sub_addr, 1, syms);
+  if (syms.size() != 0) {
+    auto diff = pos - sub_addr;
+    os << " (<" << syms[0].name << "> + 0x" << std::hex << diff << ")";
+  }
+
+  os << "\n";
   return os.str();
 }
 
@@ -676,7 +746,7 @@ std::string SimpleCLIClient::_cmd_bt() {
   auto curr = _env.get_execution_point();
 
   // Read symbols
-  std::vector<SymbolInfos> syms(syms.size());
+  std::vector<SymbolInfos> syms(cs.size());
   for (std::size_t i = 0; i < cs.size(); ++i) {
     std::vector<SymbolInfos> sym;
     auto addr = cs[i].caller_start_addr;

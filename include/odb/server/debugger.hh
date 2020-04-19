@@ -63,6 +63,7 @@ public:
   /// instruction, when the VM is completely setup and ready to start execution
   /// It get all the general VM infos (nb regs, memory size, etc), and the
   /// program entry point.
+  /// Set the Debugger to 'RUNNING_TOFINISH' state
   void on_init();
 
   /// This function must be called right after the execution of every

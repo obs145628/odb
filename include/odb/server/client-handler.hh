@@ -1,4 +1,4 @@
-//===-- server/client-handler.hh - ClientHandler definition ----*- C++//-*-===//
+//===-- server/client-handler.hh - ClientHandler definition -----*- C++ -*-===//
 //
 // ODB Library
 // Author: Steven Lariau
@@ -49,14 +49,12 @@ public:
   /// client, in order to check if a client was connected.
   virtual void setup_connection() = 0;
 
-  /// This function must read and exec one Debugger command.
+  /// This function must read and exec one/many Debugger command.
   /// Or returns without doing anything if the client get disconnected.
   /// This function is called on the Debugger loop only when the Debugger is in
   /// stopped state.
-  /// This function may block until it gets a command from a client, or just
-  /// return if none is available yet, it doesn't matter because the
-  /// DebuggerLoop won't break until this object receive a command that put the
-  /// Debugger in Running state again, or the client get disconnected.
+  /// This function should block until it gets a command from a client, or the
+  /// client gets deconneted.
   virtual void run_command() = 0;
 
 protected:

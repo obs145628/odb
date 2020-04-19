@@ -115,7 +115,7 @@ odb::vm_reg_t VMApi::find_reg_id(const std::string &name) {
     char c2 = name[2];
     if (c1 < '0' || c1 > '9' || c2 < '0' || c2 > '4')
       throw odb::VMApi::Error("Invalid register name");
-    return (c1 - '0') * 10 + c2;
+    return (c1 - '0') * 10 + (c2 - '0');
   }
 
   if (name == "sp")
@@ -156,7 +156,7 @@ std::vector<odb::vm_sym_t> VMApi::get_symbols(odb::vm_ptr_t addr,
   if (addr >= MEM_SIZE || addr + size > MEM_SIZE)
     throw odb::VMApi::Error("Memory address out of range (0-2048)");
   auto end = addr + size;
-  addr = std::min(addr, MEM_CODE_START);
+  addr = std::max(addr, MEM_CODE_START);
   std::vector<odb::vm_sym_t> res;
 
   for (auto it = addr; it < end; ++it) {
