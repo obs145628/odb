@@ -25,7 +25,8 @@ namespace odb {
 class CLIClientHandler : public ClientHandler {
 
 public:
-  CLIClientHandler(Debugger &db);
+  CLIClientHandler(Debugger &db, const ServerConfig &conf);
+  ~CLIClientHandler() override;
 
   void setup_connection() override;
 
@@ -35,6 +36,10 @@ private:
   DBClient _db_client;
   SimpleCLIClient _client;
   bool _is_tty;
+
+  bool _catch_sigint;
+
+  void _on_disconnect();
 };
 
 } // namespace odb

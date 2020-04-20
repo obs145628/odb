@@ -22,6 +22,26 @@
 
 namespace odb {
 
+struct ServerConfig {
+  // If true, the debugger is running
+  // default is false
+  // env: ODB_CONF_ENABLED=0/1
+  bool enabled;
+
+  // If true, the execution is stopped before the first instruction
+  // Used to be able to debug a program from the beginning
+  // default is false
+  // env: ODB_CONF_NOSTART=0/1
+  bool nostart;
+
+  // If true and ServerCLI is used, a SIGINT signal handler is set that will
+  // stop the VM execution This way, it's possible to stop execution and get
+  // back the command line using Ctrl-C
+  // default is true
+  // env: ODB_CONF_SERVER_CLI_SIGHANDLER
+  bool server_cli_sighandler;
+};
+
 /// To setup a DB Server, an instance of this class must be created
 /// Main class, responsible for controlling every part of ODB server-side
 ///
@@ -34,22 +54,14 @@ class ServerApp {
 public:
   using api_builder_f = std::function<std::unique_ptr<VMApi>()>;
 
-  struct Config {
-    // If true, the debugger is running
-    // default is false
-    // env: ODB_CONF_ENABLED=0/1
-    bool enabled;
-
-    // If true, the execution is stopped before the first instruction
-    // Used to be able to debug a program from the beginning
-    // default is false
-    // env: ODB_CONF_NOSTART=0/1
-    bool nostart;
-  };
+  // Global variable used to stop the program
+  // Check inside `loop()`, if set to true, _db->stop() is called
+  // This is a global to be able to stop the DB on signal handlers
+  static bool g_force_stop_db;
 
   /// `api_builder` is a functor called when needed to build the debugger core
   /// It is never called if the debugger isn't enabled
-  ServerApp(const Config &conf, const api_builder_f &api_builder);
+  ServerApp(const ServerConfig &conf, const api_builder_f &api_builder);
 
   /// Instantiate with default config
   ServerApp(const api_builder_f &api_builder);
@@ -62,7 +74,7 @@ public:
   void loop();
 
 private:
-  Config _conf;
+  ServerConfig _conf;
   api_builder_f _api_builder;
   std::unique_ptr<Debugger> _db;
   std::unique_ptr<ClientHandler> _client;

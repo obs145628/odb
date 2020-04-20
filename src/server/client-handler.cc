@@ -2,8 +2,8 @@
 
 namespace odb {
 
-ClientHandler::ClientHandler(Debugger &debugger)
-    : _debugger(debugger), _state(State::NOT_CONNECTED) {}
+ClientHandler::ClientHandler(Debugger &debugger, const ServerConfig &conf)
+    : _debugger(debugger), _conf(conf), _state(State::NOT_CONNECTED) {}
 
 void ClientHandler::_client_connected() { _state = State::CONNECTED; }
 

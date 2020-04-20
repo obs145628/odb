@@ -38,8 +38,9 @@ public:
     DISCONNECTED,  // end of connection
   };
 
-  ClientHandler(Debugger &debugger);
+  ClientHandler(Debugger &debugger, const ServerConfig &conf);
   ClientHandler(const ClientHandler &) = delete;
+  virtual ~ClientHandler() = default;
 
   State get_state() const { return _state; }
 
@@ -66,8 +67,11 @@ protected:
 
   Debugger &get_debugger() { return _debugger; }
 
+  const ServerConfig &get_conf() { return _conf; }
+
 private:
   Debugger &_debugger;
+  const ServerConfig &_conf;
   State _state;
 };
 

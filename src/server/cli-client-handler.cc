@@ -3,19 +3,40 @@
 #include <cassert>
 #include <cstdio>
 #include <iostream>
+#include <signal.h>
 #include <unistd.h>
 
 #include "odb/server/db-client-impl-vmside.hh"
+#include "odb/server/server-app.hh"
 
 namespace odb {
 
-CLIClientHandler::CLIClientHandler(Debugger &db)
-    : ClientHandler(db), _db_client(std::make_unique<DBClientImplVMSide>(db)),
-      _client(_db_client), _is_tty(isatty(fileno(stdin))) {}
+namespace {
+
+void sigint_handler_fn(int) { ServerApp::g_force_stop_db = true; }
+
+} // namespace
+
+CLIClientHandler::CLIClientHandler(Debugger &db, const ServerConfig &conf)
+    : ClientHandler(db, conf),
+      _db_client(std::make_unique<DBClientImplVMSide>(db)), _client(_db_client),
+      _is_tty(isatty(fileno(stdin))), _catch_sigint(false) {}
+
+CLIClientHandler::~CLIClientHandler() { _on_disconnect(); }
 
 void CLIClientHandler::setup_connection() {
   _db_client.connect();
   _client_connected();
+
+  if (get_conf().server_cli_sighandler) {
+    // Add signal to stop program execution on Ctrl-C
+    struct sigaction sigint_handler;
+    sigint_handler.sa_handler = sigint_handler_fn;
+    sigemptyset(&sigint_handler.sa_mask);
+    sigint_handler.sa_flags = 0;
+    sigaction(SIGINT, &sigint_handler, nullptr);
+    _catch_sigint = true;
+  }
 }
 
 void CLIClientHandler::run_command() {
@@ -37,8 +58,12 @@ void CLIClientHandler::run_command() {
 
   // Disconnect is stdin closed
   std::cin.peek();
-  if (!std::cin.good())
+  if (!std::cin.good()) {
     _client_disconnected();
+    if (_is_tty)
+      std::cout << "Debug session closed, program resumed.\n";
+    _on_disconnect();
+  }
 
   // Read and exec one command
   std::string cmd;
@@ -50,6 +75,19 @@ void CLIClientHandler::run_command() {
   std::cout << out;
   if (!out.empty() && out.back() != '\n')
     std::cout << std::endl;
+}
+
+void CLIClientHandler::_on_disconnect() {
+
+  if (_catch_sigint) {
+    // Remove signal handler
+    struct sigaction sigint_handler;
+    sigint_handler.sa_handler = SIG_DFL;
+    sigemptyset(&sigint_handler.sa_mask);
+    sigint_handler.sa_flags = 0;
+    sigaction(SIGINT, &sigint_handler, nullptr);
+    _catch_sigint = false;
+  }
 }
 
 } // namespace odb

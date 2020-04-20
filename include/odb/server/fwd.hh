@@ -103,5 +103,8 @@ struct VMInfos {
 class ClientHandler;
 class Debugger;
 class VMApi;
+class ServerApp;
+
+struct ServerConfig;
 
 } // namespace odb

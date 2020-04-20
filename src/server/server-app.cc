@@ -13,16 +13,21 @@
 
 namespace odb {
 namespace {
-const ServerApp::Config g_conf_default = {
+const ServerConfig g_conf_default = {
     .enabled = false,
     .nostart = false,
+    .server_cli_sighandler = true,
 };
 
 constexpr const char *ENV_CONF_ENABLED = "ODB_CONF_ENABLED";
 constexpr const char *ENV_CONF_NOSTART = "ODB_CONF_NOSTART";
+constexpr const char *ENV_CONF_SERVER_CLI_SIGHANDLER =
+    "ODB_CONF_SERVER_CLI_SIGHANDLER";
 } // namespace
 
-ServerApp::ServerApp(const Config &conf, const api_builder_f &api_builder)
+bool ServerApp::g_force_stop_db = false;
+
+ServerApp::ServerApp(const ServerConfig &conf, const api_builder_f &api_builder)
     : _conf(conf), _api_builder(api_builder) {
 
   // Load env variables
@@ -33,6 +38,12 @@ ServerApp::ServerApp(const Config &conf, const api_builder_f &api_builder)
   auto env_nostart = std::getenv(ENV_CONF_NOSTART);
   if (env_nostart)
     _conf.nostart = std::strcmp(env_nostart, "1") == 0;
+
+  auto env_conf_server_cli_sighandler =
+      std::getenv(ENV_CONF_SERVER_CLI_SIGHANDLER);
+  if (env_conf_server_cli_sighandler)
+    _conf.server_cli_sighandler =
+        std::strcmp(env_conf_server_cli_sighandler, "1") == 0;
 }
 
 ServerApp::ServerApp(const api_builder_f &api_builder)
@@ -53,6 +64,12 @@ void ServerApp::loop() {
     _client->setup_connection();
     if (_client->get_state() == ClientHandler::State::CONNECTED)
       _stop_db();
+  }
+
+  // Check global stop variable
+  if (g_force_stop_db) {
+    _stop_db();
+    g_force_stop_db = false;
   }
 
   for (;;) {
@@ -87,7 +104,7 @@ void ServerApp::_init() {
 
   // Create and setup client
   // @TODO use a more generic client
-  _client = std::make_unique<CLIClientHandler>(db);
+  _client = std::make_unique<CLIClientHandler>(db, _conf);
 }
 
 void ServerApp::_connect() {
