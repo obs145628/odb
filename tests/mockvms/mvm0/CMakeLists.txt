@@ -24,5 +24,5 @@ set(TEST_SRC
 set(TEST_NAME utest_mockvms_mvm0.bin)
 add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC})
 target_link_libraries(${TEST_NAME} mock_mvm0 odb_server)
-add_dependencies(${TEST_NAME} mock_mvm0)
+add_dependencies(${TEST_NAME} mock-mvm0-app)
 add_dependencies(build-tests ${TEST_NAME})

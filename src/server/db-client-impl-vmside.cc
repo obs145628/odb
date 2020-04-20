@@ -142,20 +142,17 @@ void DBClientImplVMSide::get_symbols_by_names(const char **names,
 }
 
 void DBClientImplVMSide::get_code_text(vm_ptr_t addr, std::size_t nins,
-                                       vm_size_t &out_code_size,
-                                       std::vector<std::string> &out_text) {
-
-  vm_size_t len = 0;
+                                       std::vector<std::string> &out_text,
+				       std::vector<vm_size_t>& out_sizes) {
   out_text.resize(nins);
+  out_sizes.resize(nins);
 
   for (std::size_t i = 0; i < nins; ++i) {
     vm_size_t dist;
     out_text[i] = _db.get_code_text(addr, dist);
+    out_sizes[i] = dist;
     addr += dist;
-    len += dist;
   }
-
-  out_code_size = len;
 }
 
 void DBClientImplVMSide::add_breakpoints(const vm_ptr_t *addrs,

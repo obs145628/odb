@@ -61,8 +61,9 @@ public:
   void get_symbols_by_names(const char **names, SymbolInfos *out_infos,
                             std::size_t nsyms) override;
 
-  void get_code_text(vm_ptr_t addr, std::size_t nins, vm_size_t &out_code_size,
-                     std::vector<std::string> &out_text) override;
+  void get_code_text(vm_ptr_t addr, std::size_t nins,
+                     std::vector<std::string> &out_text,
+		     std::vector<vm_size_t>& out_sizes) override;
 
   void add_breakpoints(const vm_ptr_t *addrs, std::size_t size) override;
 

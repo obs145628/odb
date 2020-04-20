@@ -63,8 +63,8 @@ public:
                                     std::size_t nsyms) = 0;
 
   virtual void get_code_text(vm_ptr_t addr, std::size_t nins,
-                             vm_size_t &out_code_size,
-                             std::vector<std::string> &out_text) = 0;
+                             std::vector<std::string> &out_text,
+			     std::vector<vm_size_t>& out_sizes) = 0;
 
   virtual void add_breakpoints(const vm_ptr_t *addrs, std::size_t size) = 0;
 

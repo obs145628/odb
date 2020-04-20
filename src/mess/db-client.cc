@@ -92,10 +92,10 @@ void DBClient::get_symbols_by_names(const char **names, SymbolInfos *out_infos,
 }
 
 void DBClient::get_code_text(vm_ptr_t addr, std::size_t nins,
-                             vm_size_t &out_code_size,
-                             std::vector<std::string> &out_text) {
+                             std::vector<std::string> &out_text,
+			     std::vector<vm_size_t>& out_sizes) {
   assert(_state == State::VM_STOPPED);
-  _impl->get_code_text(addr, nins, out_code_size, out_text);
+  _impl->get_code_text(addr, nins, out_text, out_sizes);
 }
 
 void DBClient::add_breakpoints(const vm_ptr_t *addrs, std::size_t size) {

@@ -555,20 +555,14 @@ std::string SimpleCLIClient::_cmd_code() {
   std::size_t nins = 2 * n + 1;
 
   std::vector<std::string> raw_code;
+  std::vector<vm_size_t> code_sizes;
+
+  _env.get_code_text(addr, nins, raw_code, code_sizes);
   std::vector<vm_ptr_t> code_addrs;
-
-  // @TODO use one call to get_code_text instead of many
-  //_env.get_code_text(addr, nins, code_size, raw_code);
   vm_ptr_t next_addr = addr;
-  for (std::size_t i = 0; i < nins; ++i) {
-    vm_size_t ins_size;
-    std::vector<std::string> ins_text;
-    _env.get_code_text(next_addr, 1, ins_size, ins_text);
-    assert(ins_text.size() == 1);
-
-    raw_code.push_back(ins_text[0]);
+  for (size_t i = 0; i < code_sizes.size(); ++i) {
     code_addrs.push_back(next_addr);
-    next_addr += ins_size;
+    next_addr += code_sizes[i];
   }
 
   // Load symbol definitions
@@ -618,7 +612,7 @@ std::string SimpleCLIClient::_cmd_code() {
     if (def_i < sym_defs.size() && sym_defs[def_i].addr == code_addrs[i]) {
       if (!first)
         os << "\n";
-      os << "   0" << std::hex << code_addrs[i] << " <" << sym_defs[def_i].name
+      os << "     0x0" << std::hex << code_addrs[i] << " <" << sym_defs[def_i].name
          << ">:\n";
       ++def_i;
     }
@@ -629,11 +623,11 @@ std::string SimpleCLIClient::_cmd_code() {
     first = false;
 
     if (code_addrs[i] == act_addr)
-      os << " -> ";
+      os << "  ->  ";
     else
-      os << "    ";
+      os << "      ";
 
-    os << std::hex << code_addrs[i] << ":    ";
+    os << "0x" << std::hex << code_addrs[i] << ":    ";
 
     while (ref_i < refs.size() && ref_pos[ref_i][0] == i) {
       os << l.substr(off, ref_pos[ref_i][1] - off);

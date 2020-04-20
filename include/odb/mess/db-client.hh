@@ -157,10 +157,10 @@ public:
   /// @param addr VM address where to start getting codes
   /// @param nins number of instructions that need to be decoded
   /// @param out_code_size will contain the number of bytes decoded
-  /// @param out_text will contain the decoded text
+  /// @param out_sizes will contain the size in bytes of each decoded instructions
   /// @extra vector<string> not good, can do better with cache
-  void get_code_text(vm_ptr_t addr, std::size_t nins, vm_size_t &out_code_size,
-                     std::vector<std::string> &out_text);
+  void get_code_text(vm_ptr_t addr, std::size_t nins,
+                     std::vector<std::string> &out_text, std::vector<vm_size_t>& out_sizes);
 
   /// Add many breakpoint at once
   /// @param addrs array of addresses
