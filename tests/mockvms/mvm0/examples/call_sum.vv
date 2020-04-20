@@ -1,0 +1,58 @@
+@_begin
+	b @_start
+
+@arr_sum
+	movi 1 r2
+	add r1 r2 r1
+	movi 0 r3
+
+@arr_sum_loop
+	movi 1 r2
+	sub r1 r2 r1
+	bz @arr_sum_end
+	ldr r0 r2
+	add r3 r2 r3
+	movi 4 r2
+	add r0 r2 r0
+	b @arr_sum_loop
+
+@arr_sum_end
+	mov r3 r0
+	ret
+
+@fill_arr
+	movi 17 r1
+	str r1 r0
+	movi 4 r1
+	add r0 r1 r0
+	movi 87 r1
+	str r1 r0
+	movi 4 r1
+	add r0 r1 r0
+	movi 6 r1
+	str r1 r0
+	movi 4 r1
+	add r0 r1 r0
+	movi 489 r1
+	str r1 r0
+	movi 4 r1
+	add r0 r1 r0
+	movi 197 r1
+	str r1 r0
+	movi 4 r1
+	add r0 r1 r0
+	movi 812 r1
+	str r1 r0
+	movi 4 r1
+	add r0 r1 r0
+	ret
+
+@_start
+	movi 600 r0
+	call @fill_arr
+	movi 600 r0
+	movi 6 r1
+	call @arr_sum
+	mov r0 r10
+	movi 0 r0
+	sys 0

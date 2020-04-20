@@ -1,7 +1,5 @@
 #include "utils.hh"
 
-#define PATH_CALL_ADD (MVM0_EXS_DIR + std::string("call_add.vv"))
-
 namespace {
 
 std::uint32_t read_u32(const mvm0::CPU &cpu, std::size_t addr) {
@@ -122,6 +120,23 @@ TEST_CASE("exec call_add", "") {
 
   REQUIRE(cpu.step() == 1);
   REQUIRE(cpu.get_pc() == 1033);
+  REQUIRE(cpu.status() == CPU::Status::NORMAL_EXIT);
+}
+
+TEST_CASE("exec call_sum", "") {
+  using namespace mvm0;
+  auto rom = parse_file(PATH_CALL_SUM);
+  CPU cpu(rom);
+  cpu.init();
+
+  REQUIRE(cpu.status() == CPU::Status::OK);
+
+  while (cpu.step() == 0)
+    continue;
+
+  REQUIRE(cpu.get_pc() == 1071);
+  REQUIRE(cpu.get_reg(0) == 0);
+  REQUIRE(cpu.get_reg(10) == 1608);
   REQUIRE(cpu.status() == CPU::Status::NORMAL_EXIT);
 }
 

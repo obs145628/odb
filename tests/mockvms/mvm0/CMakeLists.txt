@@ -1,4 +1,5 @@
 add_definitions(-DMVM0_EXS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/examples/")
+add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}/")
 
 set(SRC
   src/cpu.cc
@@ -17,6 +18,8 @@ set(TEST_SRC
   tests/test_main.cc
   tests/test_server_db.cc
   tests/test_server_db_fact.cc
+  tests/test_simplecli_add.cc
+  tests/test_simplecli_sum.cc
 )
 set(TEST_NAME utest_mockvms_mvm0.bin)
 add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC})

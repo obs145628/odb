@@ -502,7 +502,7 @@ std::string SimpleCLIClient::_cmd_smem() {
 
   auto ty = type_desc_parse(_cmd[1]);
   auto ty_len = type_desc_size(ty);
-  std::size_t nb_items = _cmd.size() - 2;
+  std::size_t nb_items = _cmd.size() - 3;
   vm_size_t buff_size = nb_items * ty_len;
   std::vector<char> buff(buff_size);
   const char *buff_ptr = &buff[0];
