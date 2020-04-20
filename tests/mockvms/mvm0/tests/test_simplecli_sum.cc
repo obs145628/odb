@@ -6,9 +6,9 @@ namespace {
   const char *cmds = ""
                      "b @arr_sum\n"
                      "pmem u32 600 7\n"
-                     "run\n"
+                     "continue\n"
                      "pmem u32 600 7\n"
-                     "run\n"
+                     "continue\n"
                      "preg u32 %r10\n";
   auto vals = str_split(run_simplecli(mode, PATH_CALL_SUM, cmds), '\n');
   REQUIRE(vals.size() == 7);
@@ -20,11 +20,11 @@ namespace {
 void test_call_sum_smem(SimpleCLIMode mode) {
   const char *cmds = ""
                      "b @arr_sum\n"
-                     "run\n"
+                     "continue\n"
                      "pmem u32 600 7\n"
                      "smem u32 612 13056 1000\n"
                      "pmem u32 600 7\n"
-                     "run\n"
+                     "continue\n"
                      "preg u32 %r10\n";
   auto vals = str_split(run_simplecli(mode, PATH_CALL_SUM, cmds), '\n');
   REQUIRE(vals.size() == 7);

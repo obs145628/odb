@@ -335,14 +335,14 @@ std::string SimpleCLIClient::exec(const std::string &cmd) {
       return _cmd_b();
     else if (name == "delb")
       return _cmd_delb();
-    else if (name == "run")
-      return _cmd_run();
-    else if (name == "step")
+    else if (name == "c" || name == "continue")
+      return _cmd_continue();
+    else if (name == "s" || name == "step")
       return _cmd_step();
-    else if (name == "next")
+    else if (name == "n" || name == "next")
       return _cmd_next();
-    else if (name == "fin")
-      return _cmd_fin();
+    else if (name == "fin" || name == "finish")
+      return _cmd_finish();
     else if (name == "state")
       return _cmd_state();
     else if (name == "bt")
@@ -685,16 +685,7 @@ std::string SimpleCLIClient::_cmd_delb() {
   return os.str();
 }
 
-#if 0
-  enum class ResumeType {
-  ToFinish, // run program until exit or crash, ignoring all breakpoints
-  Continue, // run until next breakpoint
-  Step, // run the next instruction
-  StepOver, // run next instruction, if it's a call, keep running until
-  StepOut, // run instructions until returning from current subroutine, or stop
-};
-#endif
-std::string SimpleCLIClient::_cmd_run() {
+std::string SimpleCLIClient::_cmd_continue() {
   _env.resume(ResumeType::Continue);
   return "";
 }
@@ -709,7 +700,7 @@ std::string SimpleCLIClient::_cmd_next() {
   return "";
 }
 
-std::string SimpleCLIClient::_cmd_fin() {
+std::string SimpleCLIClient::_cmd_finish() {
   _env.resume(ResumeType::StepOut);
   return "";
 }

@@ -50,7 +50,7 @@ void test_call_add_preg(SimpleCLIMode mode) {
 void test_call_add_sreg(SimpleCLIMode mode) {
   const char *cmds = ""
                      "b @my_add\n"
-                     "run\n"
+                     "continue\n"
                      "preg u32 %r0 %r1\n"
                      "sreg u32 %0 49 %r1 27\n"
                      "preg u32 %r0 %r1\n"
@@ -116,7 +116,7 @@ void test_call_add_pmem(SimpleCLIMode mode) {
   const char *cmds = ""
                      "pmem u32 1012 5\n"
                      "b @my_add\n"
-                     "run\n"
+                     "continue\n"
                      "pmem u32 1012 5\n"
                      "pmem u16 1018 5\n"
                      "pmem u8 1018 5\n"
@@ -162,8 +162,8 @@ void test_call_add_b(SimpleCLIMode mode) {
   const char *cmds = ""
                      "b 1031\n"
                      "b @my_add\n"
-                     "run\n"
-                     "run\n"
+                     "continue\n"
+                     "continue\n"
                      "b @foo\n"
                      "b @0\n"
                      "b @1\n"
@@ -186,10 +186,10 @@ void test_call_add_delb(SimpleCLIMode mode) {
   const char *cmds = ""
                      "b 1031\n"
                      "b @my_add\n"
-                     "run\n"
+                     "continue\n"
                      "delb @1\n"
                      "delb 1031\n"
-                     "run\n"
+                     "continue\n"
                      "delb @foo\n"
                      "delb @4\n"
                      "delb @2\n"
@@ -211,18 +211,18 @@ void test_call_add_delb(SimpleCLIMode mode) {
           "Error: cannot delete breakpoint: there is none at this address");
 }
 
-void test_call_add_run(SimpleCLIMode mode) {
+void test_call_add_continue(SimpleCLIMode mode) {
   const char *cmds = ""
                      "b 1027\n"
                      "b 1028\n"
                      "b @my_add\n"
                      "b 1031\n"
-                     "run\n"
-                     "run\n"
-                     "run\n"
-                     "run\n"
-                     "run\n"
-                     "run\n";
+                     "continue\n"
+                     "continue\n"
+                     "continue\n"
+                     "continue\n"
+                     "continue\n"
+                     "continue\n";
   auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
   REQUIRE(vals.size() == 11);
   REQUIRE(vals[0] == "program stopped at 0x400 (<_begin> + 0x0)");
@@ -232,6 +232,27 @@ void test_call_add_run(SimpleCLIMode mode) {
   REQUIRE(vals[8] == "program stopped at 0x407 (<_begin> + 0x7)");
   REQUIRE(vals[9] == "Program exited normally at 0x408 (<_begin> + 0x8)");
   REQUIRE(vals[10] ==
+          "Error: cannot resume execution: program already finished");
+}
+
+void test_call_add_continue_short(SimpleCLIMode mode) {
+  const char *cmds = ""
+                     "b 1027\n"
+                     "b 1028\n"
+                     "b 1032\n"
+                     "c\n"
+                     "c\n"
+                     "c\n"
+                     "c\n"
+    "c\n";
+  auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
+  REQUIRE(vals.size() == 9);
+  REQUIRE(vals[0] == "program stopped at 0x400 (<_begin> + 0x0)");
+  REQUIRE(vals[4] == "program stopped at 0x403 (<_begin> + 0x3)");
+  REQUIRE(vals[5] == "program stopped at 0x404 (<_begin> + 0x4)");
+  REQUIRE(vals[6] == "program stopped at 0x408 (<_begin> + 0x8)");
+  REQUIRE(vals[7] == "Program exited normally at 0x408 (<_begin> + 0x8)");
+  REQUIRE(vals[8] ==
           "Error: cannot resume execution: program already finished");
 }
 
@@ -247,6 +268,34 @@ void test_call_add_step(SimpleCLIMode mode) {
                      "step\n"
                      "step\n"
                      "step\n";
+  auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
+  REQUIRE(vals.size() == 11);
+  REQUIRE(vals[0] == "program stopped at 0x400 (<_begin> + 0x0)");
+  REQUIRE(vals[1] == "program stopped at 0x403 (<_begin> + 0x3)");
+  REQUIRE(vals[2] == "program stopped at 0x404 (<_begin> + 0x4)");
+  REQUIRE(vals[3] == "program stopped at 0x405 (<_begin> + 0x5)");
+  REQUIRE(vals[4] == "program stopped at 0x401 (<my_add> + 0x0)");
+  REQUIRE(vals[5] == "program stopped at 0x402 (<my_add> + 0x1)");
+  REQUIRE(vals[6] == "program stopped at 0x406 (<_begin> + 0x6)");
+  REQUIRE(vals[7] == "program stopped at 0x407 (<_begin> + 0x7)");
+  REQUIRE(vals[8] == "program stopped at 0x408 (<_begin> + 0x8)");
+  REQUIRE(vals[9] == "Program exited normally at 0x408 (<_begin> + 0x8)");
+  REQUIRE(vals[10] ==
+          "Error: cannot resume execution: program already finished");
+}
+
+  void test_call_add_step_short(SimpleCLIMode mode) {
+  const char *cmds = ""
+                     "s\n"
+                     "s\n"
+                     "s\n"
+                     "s\n"
+                     "s\n"
+                     "s\n"
+                     "s\n"
+                     "s\n"
+                     "s\n"
+                     "s\n";
   auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
   REQUIRE(vals.size() == 11);
   REQUIRE(vals[0] == "program stopped at 0x400 (<_begin> + 0x0)");
@@ -287,7 +336,48 @@ void test_call_add_next(SimpleCLIMode mode) {
           "Error: cannot resume execution: program already finished");
 }
 
-void test_call_add_fin(SimpleCLIMode mode) {
+void test_call_add_next_short(SimpleCLIMode mode) {
+  const char *cmds = ""
+                     "n\n"
+                     "n\n"
+                     "n\n"
+                     "n\n"
+                     "n\n"
+                     "n\n"
+                     "n\n"
+                     "n\n";
+  auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
+  REQUIRE(vals.size() == 9);
+  REQUIRE(vals[0] == "program stopped at 0x400 (<_begin> + 0x0)");
+  REQUIRE(vals[1] == "program stopped at 0x403 (<_begin> + 0x3)");
+  REQUIRE(vals[2] == "program stopped at 0x404 (<_begin> + 0x4)");
+  REQUIRE(vals[3] == "program stopped at 0x405 (<_begin> + 0x5)");
+  REQUIRE(vals[4] == "program stopped at 0x406 (<_begin> + 0x6)");
+  REQUIRE(vals[5] == "program stopped at 0x407 (<_begin> + 0x7)");
+  REQUIRE(vals[6] == "program stopped at 0x408 (<_begin> + 0x8)");
+  REQUIRE(vals[7] == "Program exited normally at 0x408 (<_begin> + 0x8)");
+  REQUIRE(vals[8] ==
+          "Error: cannot resume execution: program already finished");
+}
+
+void test_call_add_finish(SimpleCLIMode mode) {
+  const char *cmds = ""
+                     "b @my_add\n"
+                     "finish\n"
+                     "finish\n"
+                     "finish\n"
+                     "finish\n";
+  auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
+  REQUIRE(vals.size() == 6);
+  REQUIRE(vals[0] == "program stopped at 0x400 (<_begin> + 0x0)");
+  REQUIRE(vals[2] == "program stopped at 0x401 (<my_add> + 0x0)");
+  REQUIRE(vals[3] == "program stopped at 0x406 (<_begin> + 0x6)");
+  REQUIRE(vals[4] == "Program exited normally at 0x408 (<_begin> + 0x8)");
+  REQUIRE(vals[5] ==
+          "Error: cannot resume execution: program already finished");
+}
+
+void test_call_add_finish_short(SimpleCLIMode mode) {
   const char *cmds = ""
                      "b @my_add\n"
                      "fin\n"
@@ -309,7 +399,7 @@ void test_call_add_state(SimpleCLIMode mode) {
                      "state\n"
                      "step\n"
                      "state\n"
-                     "run\n"
+                     "continue\n"
                      "state\n";
   auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
   REQUIRE(vals.size() == 6);
@@ -325,11 +415,11 @@ void test_call_add_bt(SimpleCLIMode mode) {
   const char *cmds = ""
                      "b @my_add\n"
                      "bt\n"
-                     "run\n"
+                     "continue\n"
                      "bt\n"
-                     "fin\n"
+                     "finish\n"
                      "bt\n"
-                     "run\n"
+                     "continue\n"
                      "bt\n";
   auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
   REQUIRE(vals.size() == 10);
@@ -370,20 +460,36 @@ TEST_CASE("simplecli_on_server call_add delb", "") {
   test_call_add_delb(SimpleCLIMode::ON_SERVER);
 }
 
-TEST_CASE("simplecli_on_server call_add run", "") {
-  test_call_add_run(SimpleCLIMode::ON_SERVER);
+TEST_CASE("simplecli_on_server call_add continue", "") {
+  test_call_add_continue(SimpleCLIMode::ON_SERVER);
+}
+
+TEST_CASE("simplecli_on_server call_add continue_short", "") {
+  test_call_add_continue_short(SimpleCLIMode::ON_SERVER);
 }
 
 TEST_CASE("simplecli_on_server call_add step", "") {
   test_call_add_step(SimpleCLIMode::ON_SERVER);
 }
 
+TEST_CASE("simplecli_on_server call_add step_short", "") {
+  test_call_add_step_short(SimpleCLIMode::ON_SERVER);
+}
+
 TEST_CASE("simplecli_on_server call_add next", "") {
   test_call_add_next(SimpleCLIMode::ON_SERVER);
 }
 
-TEST_CASE("simplecli_on_server call_add fin", "") {
-  test_call_add_fin(SimpleCLIMode::ON_SERVER);
+TEST_CASE("simplecli_on_server call_add next_short", "") {
+  test_call_add_next_short(SimpleCLIMode::ON_SERVER);
+}
+
+TEST_CASE("simplecli_on_server call_add finish", "") {
+  test_call_add_finish(SimpleCLIMode::ON_SERVER);
+}
+
+TEST_CASE("simplecli_on_server call_add finish_short", "") {
+  test_call_add_finish_short(SimpleCLIMode::ON_SERVER);
 }
 
 TEST_CASE("simplecli_on_server call_add state", "") {

@@ -55,10 +55,10 @@ namespace odb {
 /// delb <val> (address)
 ///
 /// Resume execution:
-/// run (continue)
-/// step (step)
-/// next (step over)
-/// fin (step out)
+/// c / continue (continue)
+/// s / step (step)
+/// n / next (step over)
+/// fin / finish (step out)
 ///
 /// Print current state informations (addr, stack)
 /// state
@@ -107,13 +107,13 @@ private:
 
   std::string _cmd_delb();
 
-  std::string _cmd_run();
+  std::string _cmd_continue();
 
   std::string _cmd_step();
 
   std::string _cmd_next();
 
-  std::string _cmd_fin();
+  std::string _cmd_finish();
 
   std::string _cmd_state();
 
