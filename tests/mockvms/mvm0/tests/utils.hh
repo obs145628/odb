@@ -80,8 +80,8 @@ inline std::string run_simplecli_onserver(const std::string &rom_path,
 
   write_file_str(tmp_in_file, db_cmds);
 
-  std::string cmd = "ODB_CONF_ENABLED=1 " + BIN_MVM + " " + rom_path + " < " +
-                    std::string(tmp_in_file) + " > " +
+  std::string cmd = "ODB_CONF_ENABLED=1 ODB_CONF_MODE_SERVER_CLI=1 " + BIN_MVM +
+                    " " + rom_path + " < " + std::string(tmp_in_file) + " > " +
                     std::string(tmp_out_file);
   REQUIRE(std::system(cmd.c_str()) == 0);
   return read_file_str(tmp_out_file);

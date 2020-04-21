@@ -10,6 +10,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#pragma once
+
 #include "../server/fwd.hh"
 #include "fwd.hh"
 #include <string>

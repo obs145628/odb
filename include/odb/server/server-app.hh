@@ -34,6 +34,15 @@ struct ServerConfig {
   // env: ODB_CONF_NOSTART=0/1
   bool nostart;
 
+  // If true, the CLI on Server mode is enabled
+  // With this mode, the debugguer is controled direcly from the VM process,
+  // with a CLI reading commands from stdin
+  // When enabled, the VM is stopped at the beginning and the CLI appears right
+  // away.
+  // default is false
+  // env: ODB_CONF_MODE_SERVER_CLI=0/1
+  bool mode_server_cli;
+
   // If true and ServerCLI is used, a SIGINT signal handler is set that will
   // stop the VM execution This way, it's possible to stop execution and get
   // back the command line using Ctrl-C
@@ -81,6 +90,9 @@ private:
 
   // init debugger
   void _init();
+
+  // disable debugger and clear all allocated memory
+  void _shutdown();
 
   // block until `_client` connected
   void _connect();

@@ -3,6 +3,7 @@ set(SRC
   client-handler.cc
   db-client-impl-vmside.cc
   debugger.cc
+  multi-client-handler.cc
   server-app.cc
 )
 add_library(odb_server ${SRC})

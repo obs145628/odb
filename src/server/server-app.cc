@@ -9,18 +9,20 @@
 #include "odb/server/debugger.hh"
 
 #include "odb/mess/db-client-impl.hh"
-#include "odb/server/cli-client-handler.hh"
+#include "odb/server/multi-client-handler.hh"
 
 namespace odb {
 namespace {
 const ServerConfig g_conf_default = {
     .enabled = false,
     .nostart = false,
+    .mode_server_cli = false,
     .server_cli_sighandler = true,
 };
 
 constexpr const char *ENV_CONF_ENABLED = "ODB_CONF_ENABLED";
 constexpr const char *ENV_CONF_NOSTART = "ODB_CONF_NOSTART";
+constexpr const char *ENV_CONF_MODE_SERVER_CLI = "ODB_CONF_MODE_SERVER_CLI";
 constexpr const char *ENV_CONF_SERVER_CLI_SIGHANDLER =
     "ODB_CONF_SERVER_CLI_SIGHANDLER";
 } // namespace
@@ -39,6 +41,10 @@ ServerApp::ServerApp(const ServerConfig &conf, const api_builder_f &api_builder)
   if (env_nostart)
     _conf.nostart = std::strcmp(env_nostart, "1") == 0;
 
+  auto env_mode_server_cli = std::getenv(ENV_CONF_MODE_SERVER_CLI);
+  if (env_mode_server_cli)
+    _conf.mode_server_cli = std::strcmp(env_mode_server_cli, "1") == 0;
+
   auto env_conf_server_cli_sighandler =
       std::getenv(ENV_CONF_SERVER_CLI_SIGHANDLER);
   if (env_conf_server_cli_sighandler)
@@ -54,9 +60,12 @@ void ServerApp::loop() {
   if (!_conf.enabled)
     return;
 
-  if (_db.get() == nullptr)
+  if (_db.get() == nullptr) {
     _init();
-  else
+    if (!_conf.enabled) // other options read with `_init()` may disable
+                        // debugger
+      return;
+  } else
     _db->on_update();
 
   // Switching from disconnected to connected stop the program
@@ -103,8 +112,18 @@ void ServerApp::_init() {
     _stop_db();
 
   // Create and setup client
-  // @TODO use a more generic client
-  _client = std::make_unique<CLIClientHandler>(db, _conf);
+  auto multi_cli = std::make_unique<MultiClientHandler>(db, _conf);
+  if (multi_cli->empty()) { // shutdown if no client handler
+    _shutdown();
+    return;
+  }
+  _client = std::move(multi_cli);
+}
+
+void ServerApp::_shutdown() {
+  _client.reset();
+  _db.reset();
+  _conf.enabled = false;
 }
 
 void ServerApp::_connect() {
