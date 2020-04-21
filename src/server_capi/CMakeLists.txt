@@ -1,4 +1,5 @@
 set(SRC
+  server-app.cc
   vm-api.cc
 )
 add_library(odb_server_capi ${SRC})
