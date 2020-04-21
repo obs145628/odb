@@ -33,6 +33,9 @@ odb::VMInfos VMApi::get_vm_infos() {
   infos.regs_flags = {REG_ZF};
   infos.memory_size = MEM_SIZE;
   infos.symbols_count = _cpu._rom.syms.size();
+  infos.pointer_size = 4;
+  infos.integer_size = 4;
+  infos.use_opcode = false;
 
   return infos;
 }

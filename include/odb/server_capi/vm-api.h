@@ -160,16 +160,6 @@ class VMApi;
 std::unique_ptr<VMApi> make_cpp_vm_api(odb_vm_api_vtable_t *table,
                                        odb_vm_api_data_t data);
 
-#if 0
-typedef enum {
-  ODB_VM_API_UPDATE_STATE_ERROR,
-  ODB_VM_API_UPDATE_STATE_EXIT,
-  ODB_VM_API_UPDATE_STATE_CALL_SUB,
-  ODB_VM_API_UPDATE_STATE_RET_SUB,
-  ODB_VM_API_UPDATE_STATE_OK,
-} odb_vm_api_update_state_t;
-#endif
-
 inline odb_vm_api_update_state_t
 make_vm_api_update_state(VMApi::UpdateState f) {
   switch (f) {

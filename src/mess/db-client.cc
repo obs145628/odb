@@ -93,7 +93,7 @@ void DBClient::get_symbols_by_names(const char **names, SymbolInfos *out_infos,
 
 void DBClient::get_code_text(vm_ptr_t addr, std::size_t nins,
                              std::vector<std::string> &out_text,
-			     std::vector<vm_size_t>& out_sizes) {
+                             std::vector<vm_size_t> &out_sizes) {
   assert(_state == State::VM_STOPPED);
   _impl->get_code_text(addr, nins, out_text, out_sizes);
 }
@@ -129,12 +129,12 @@ CallStack DBClient::get_call_stack() {
   return _udp.stack;
 }
 
-vm_reg_t DBClient::registers_count() {
+vm_reg_t DBClient::registers_count() const {
   assert(_state == State::VM_STOPPED);
   return _vm_infos.regs_count;
 }
 
-const std::vector<vm_reg_t> &DBClient::list_regs(RegKind kind) {
+const std::vector<vm_reg_t> &DBClient::list_regs(RegKind kind) const {
   assert(_state == State::VM_STOPPED);
   if (kind == RegKind::general)
     return _vm_infos.regs_general;
@@ -150,14 +150,29 @@ const std::vector<vm_reg_t> &DBClient::list_regs(RegKind kind) {
     throw VMApi::Error("list_regs: invalid reg kind");
 }
 
-vm_size_t DBClient::memory_size() {
+vm_size_t DBClient::memory_size() const {
   assert(_state == State::VM_STOPPED);
   return _vm_infos.memory_size;
 }
 
-vm_sym_t DBClient::symbols_count() {
+vm_sym_t DBClient::symbols_count() const {
   assert(_state == State::VM_STOPPED);
   return _vm_infos.symbols_count;
+}
+
+vm_size_t DBClient::pointer_size() const {
+  assert(_state == State::VM_STOPPED);
+  return _vm_infos.pointer_size;
+}
+
+vm_size_t DBClient::integer_size() const {
+  assert(_state == State::VM_STOPPED);
+  return _vm_infos.integer_size;
+}
+
+bool DBClient::use_opcode() const {
+  assert(_state == State::VM_STOPPED);
+  return _vm_infos.use_opcode;
 }
 
 } // namespace odb

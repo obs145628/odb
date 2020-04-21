@@ -98,6 +98,19 @@ struct VMInfos {
 
   // If symbols loaded during execution, can simply set to MAX value
   vm_sym_t symbols_count;
+
+  // Standard pointer type size (bytes) in VM
+  // (-1) if multiple, or doesn't apply
+  vm_size_t pointer_size;
+
+  // Standard int type size (bytes) in VM
+  // (-1) if multiple, or doesn't apply
+  vm_size_t integer_size;
+
+  // Set to true if instructions have a binary opcode
+  // Some VM have just a text format for the instructions, but no standard
+  // binary code
+  bool use_opcode;
 };
 
 class ClientHandler;

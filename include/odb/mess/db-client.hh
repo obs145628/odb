@@ -157,10 +157,12 @@ public:
   /// @param addr VM address where to start getting codes
   /// @param nins number of instructions that need to be decoded
   /// @param out_code_size will contain the number of bytes decoded
-  /// @param out_sizes will contain the size in bytes of each decoded instructions
+  /// @param out_sizes will contain the size in bytes of each decoded
+  /// instructions
   /// @extra vector<string> not good, can do better with cache
   void get_code_text(vm_ptr_t addr, std::size_t nins,
-                     std::vector<std::string> &out_text, std::vector<vm_size_t>& out_sizes);
+                     std::vector<std::string> &out_text,
+                     std::vector<vm_size_t> &out_sizes);
 
   /// Add many breakpoint at once
   /// @param addrs array of addresses
@@ -196,20 +198,33 @@ public:
   // === Static VM informations ===
   // These informations are always valid
 
+  /// Returns a reference to the VMInfos object
+  /// Valid as long as this remains valid
+  const VMInfos &get_vm_infos() const { return _vm_infos; }
+
   /// Returns total number of registers available
   /// Some VMs may have infinite registers (usually returns huge number)
-  vm_reg_t registers_count();
+  vm_reg_t registers_count() const;
 
   /// List all regs of a specific kind
   /// For VM with lots of registers, usually only list the main special ones
   /// Remains valid as long as this remains valid
-  const std::vector<vm_reg_t> &list_regs(RegKind kind);
+  const std::vector<vm_reg_t> &list_regs(RegKind kind) const;
 
   /// Returns the full memory size of the VM in bytes
-  vm_size_t memory_size();
+  vm_size_t memory_size() const;
 
   /// Returns the total number of symbols
-  vm_sym_t symbols_count();
+  vm_sym_t symbols_count() const;
+
+  // Returns the size of a pointer type value
+  vm_size_t pointer_size() const;
+
+  // Returns the size of an int type value
+  vm_size_t integer_size() const;
+
+  // Returns true if the VM instructions have binary opcodes
+  bool use_opcode() const;
 
 private:
   std::unique_ptr<DBClientImpl> _impl;

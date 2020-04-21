@@ -145,6 +145,15 @@ public:
   /// exec cycles
   vm_ptr_t get_execution_point();
 
+  /// Returns the size in bytes of a pointer in the VM
+  vm_size_t pointer_size();
+
+  /// Returns the size in bytes of an int in the VM
+  vm_size_t integer_size();
+
+  /// Returns true if the VM instructions use a binary opcode
+  bool use_opcode();
+
   /// Put a breakpoint at `addr`, no matter if this address is reachable
   /// Throws an error if there is already a breakpoint
   /// Or if `addr` outside of memory space

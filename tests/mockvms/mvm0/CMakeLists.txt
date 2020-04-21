@@ -11,7 +11,7 @@ add_library(mock_mvm0 ${SRC})
 set(APP_SRC
   src/main.cc
 )
-add_executable(mock-mvm0-app ${APP_SRC})
+add_executable(mock-mvm0-app EXCLUDE_FROM_ALL ${APP_SRC})
 target_link_libraries(mock-mvm0-app mock_mvm0 odb_server)
 
 set(TEST_SRC

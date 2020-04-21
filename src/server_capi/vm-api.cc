@@ -41,6 +41,9 @@ public:
                                 c_infos.regs_flags + c_infos.regs_flags_size);
     cpp_infos.memory_size = c_infos.memory_size;
     cpp_infos.symbols_count = c_infos.symbols_count;
+    cpp_infos.pointer_size = c_infos.pointer_size;
+    cpp_infos.integer_size = c_infos.integer_size;
+    cpp_infos.use_opcode = c_infos.use_opcode;
 
     return cpp_infos;
   }

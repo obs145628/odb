@@ -81,6 +81,9 @@ typedef struct {
   odb_vm_reg_t regs_count;
   odb_vm_size_t memory_size;
   odb_vm_sym_t symbols_count;
+  odb_vm_size_t pointer_size;
+  odb_vm_size_t integer_size;
+  int use_opcode;
 } odb_vm_infos_t;
 
 #ifdef __cplusplus

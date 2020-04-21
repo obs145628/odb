@@ -211,6 +211,10 @@ TEST_CASE("debug call_add infos", "") {
 
   REQUIRE(db.get_memory_size() == 2048);
 
+  REQUIRE(db.pointer_size() == 4);
+  REQUIRE(db.integer_size() == 4);
+  REQUIRE(db.use_opcode() == false);
+
   REQUIRE(db.get_symbols(0, 56) == std::vector<odb::vm_sym_t>{});
   REQUIRE(db.get_symbols(1024, 1) == std::vector<odb::vm_sym_t>{0});
   REQUIRE(db.get_symbols(1024, 1) == std::vector<odb::vm_sym_t>{0});

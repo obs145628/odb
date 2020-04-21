@@ -74,6 +74,9 @@ std::ostream &operator<<(std::ostream &os, const odb::VMInfos &infos) {
   dump_regs_list(os, "flags", infos.regs_flags);
   os << "  memory size: " << infos.memory_size << "\n";
   os << "  symbols count: " << infos.symbols_count << "\n";
+  os << "  pointer size: " << infos.pointer_size << "\n";
+  os << "  integer size: " << infos.integer_size << "\n";
+  os << "  use opcode: " << infos.use_opcode << "\n";
 
   os << " VM INFOS =======>\n\n";
   return os;
@@ -319,6 +322,12 @@ std::string Debugger::get_code_text(vm_ptr_t addr, vm_size_t &addr_dist) {
 }
 
 vm_ptr_t Debugger::get_execution_point() { return _ins_addr; }
+
+vm_size_t Debugger::pointer_size() { return _infos.pointer_size; }
+
+vm_size_t Debugger::integer_size() { return _infos.integer_size; }
+
+bool Debugger::use_opcode() { return _infos.use_opcode; }
 
 void Debugger::add_breakpoint(vm_ptr_t addr) {
   DB_LOG("add breakpoint(" << addr << ")");
