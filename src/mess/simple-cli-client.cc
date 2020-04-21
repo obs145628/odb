@@ -68,24 +68,44 @@ size_t type_desc_size(TypeDesc t) {
 }
 
 long long parse_int(const std::string &str, bool is_signed) {
+  bool sign = false;
+  int base = 10;
+  std::string int_str = str;
+
+  if (int_str.size() > 0 && int_str[0] == '-') {
+    if (!is_signed)
+      throw VMApi::Error("Cannot parse `" + str +
+                         "' as an integer: must be unsigned");
+    sign = false;
+    int_str = int_str.substr(1);
+  }
+
+  if (int_str.size() > 1 && int_str[0] == '0' && int_str[1] == 'x') {
+    base = 16;
+    int_str = int_str.substr(2);
+  } else if (int_str.size() > 1 && int_str[0] == '0' && int_str[1] == 'b') {
+    base = 2;
+    int_str = int_str.substr(2);
+  } else if (int_str.size() > 0 && int_str[0] == '0') {
+    base = 8;
+  }
+
   std::size_t len;
   long long res;
   bool valid = true;
+
   try {
-    res = std::stoll(str, &len);
+    res = std::stoll(int_str, &len, base);
   } catch (std::exception &) {
     valid = false;
   }
-
-  if (len != str.size())
-    valid = false;
-  else if (res < 0 && !is_signed)
+  if (len != int_str.size())
     valid = false;
 
   if (!valid)
     throw VMApi::Error("Cannot parse `" + str + "' as an integer");
 
-  return res;
+  return sign ? -res : res;
 }
 
 double parse_double(const std::string &str) {
@@ -612,8 +632,8 @@ std::string SimpleCLIClient::_cmd_code() {
     if (def_i < sym_defs.size() && sym_defs[def_i].addr == code_addrs[i]) {
       if (!first)
         os << "\n";
-      os << "     0x0" << std::hex << code_addrs[i] << " <" << sym_defs[def_i].name
-         << ">:\n";
+      os << "     0x0" << std::hex << code_addrs[i] << " <"
+         << sym_defs[def_i].name << ">:\n";
       ++def_i;
     }
 

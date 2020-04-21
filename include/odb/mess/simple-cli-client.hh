@@ -78,6 +78,8 @@ namespace odb {
 ///    <val>: <int> | <float> | <symbol>
 ///            (If symbol, val is symbol address)
 /// <symbol>: '@' (<symbol-name> | <symbol-id>)
+/// <int> : signed in base 2/8/10/16
+///   prefix 0b, 0, and 0x to change bases
 ///
 
 class SimpleCLIClient {
