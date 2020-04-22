@@ -12,7 +12,9 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
+#include <vector>
 
 #include "../server/fwd.hh"
 #include "fwd.hh"
@@ -231,6 +233,28 @@ private:
   State _state;
   DBClientUpdate _udp;
   VMInfos _vm_infos;
+
+  // Discard all temporary infos (eg memory / reg values)
+  void _discard_tmp_cache();
+
+  // Caching: register infos + vals
+  // infos static data always valid
+  // value cleared after each instruction
+
+  // Fetch all register infos into cache
+  void _fetch_reg_infos_by_id(const vm_reg_t *idxs, std::size_t nregs);
+
+  // Fetch all register infos into cache
+  void _fetch_reg_infos_by_name(const char **names, std::size_t nregs);
+
+  // Fetch all register values into cache
+  void _fetch_reg_vals_by_id(const vm_reg_t *idxs, std::size_t nregs);
+
+  std::vector<RegInfos> _regi_arr; // all reg infos
+  std::map<vm_reg_t, std::size_t>
+      _regi_idx_map; // map reg index => pos in _regi_arr
+  std::map<std::string, std::size_t>
+      _regi_name_map; // map reg name => pos in _regi_arr
 };
 
 } // namespace odb
