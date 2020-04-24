@@ -21,6 +21,7 @@ namespace odb {
 // Get everything needed for connection init:
 // vminfos, and first update
 // sent by connect()
+// receive ResVMInfosUpdate
 ODB_MESSAGE_STRUCT ReqInit {
   static constexpr Message::typeid_t MESSAGE_TYPEID = 1;
 
@@ -31,6 +32,7 @@ ODB_MESSAGE_STRUCT ReqInit {
 
 // Get update infos if VM exec stopped, or nothing if still running
 // sent by check_stopped()
+// receive ResUpdate if stopped, or ResStatus if running
 ODB_MESSAGE_STRUCT ReqUpdate {
   static constexpr Message::typeid_t MESSAGE_TYPEID = 2;
 
