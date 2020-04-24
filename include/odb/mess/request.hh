@@ -14,110 +14,238 @@
 
 #include "../server/fwd.hh"
 #include "fwd.hh"
-#include <algorithm>
-#include <cstdint>
-#include <memory>
-#include <vector>
+#include "message.hh"
 
 namespace odb {
 
-class Request {
+// Get everything needed for connection init:
+// vminfos, and first update
+// sent by connect()
+ODB_MESSAGE_STRUCT ReqInit {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 1;
 
-public:
-  enum class Type {
-    get_reg,
-    get_reg_infos,
-    set_reg,
-    get_special_reg,
-  };
+  std::uint32_t tag;
 
-  struct ReqGetReg;
-  struct ReqGetRegInfos;
-  struct ReqSetReg;
-  struct ReqGetSpecialReg;
+  static void build(Message & req);
+};
 
-  class Visitor {
-  public:
-    virtual void visit(const ReqGetReg &req) = 0;
-    virtual void visit(const ReqGetRegInfos &req) = 0;
-    virtual void visit(const ReqSetReg &req) = 0;
-    virtual void visit(const ReqGetSpecialReg &req) = 0;
-  };
+// Get update infos if VM exec stopped, or nothing if still running
+// sent by check_stopped()
+ODB_MESSAGE_STRUCT ReqUpdate {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 2;
 
-  struct ReqBase {
-    ReqBase() = default;
-    ReqBase(const ReqBase &) = delete;
-    ReqBase &operator=(const ReqBase &) = delete;
-    virtual ~ReqBase() = default;
-    virtual void accept(Visitor &v) const = 0;
-  };
+  std::uint32_t tag;
 
-  // Read the value of register `idx`
-  // Registers can have any size
-  // Response is bytes_array
-  struct ReqGetReg : public ReqBase {
-    vm_reg_t idx;
-    ReqGetReg(vm_reg_t idx) : idx(idx) {}
-    void accept(Visitor &v) const override { v.visit(*this); }
-  };
+  static void build(Message & req);
+};
 
-  // Returns static infos about a register (name, size, datatype, is special ?)
-  // Response is reg_infos
-  struct ReqGetRegInfos : public ReqBase {
-    vm_reg_t idx;
-    ReqGetRegInfos(vm_reg_t idx) : idx(idx) {}
-    void accept(Visitor &v) const override { v.visit(*this); }
-  };
+// Get reg values for all regs of same size
+// sent by get_regs()
+ODB_MESSAGE_STRUCT ReqGetRegs {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 3;
 
-  // Change the value of register `idx`
-  // Reponse is success
-  struct ReqSetReg : public ReqBase {
-    vm_reg_t idx;
-    std::vector<std::uint8_t> bytes;
-    ReqSetReg(vm_reg_t idx, const std::vector<std::uint8_t> &bytes)
-        : idx(idx), bytes(bytes) {}
-    void accept(Visitor &v) const override { v.visit(*this); }
-  };
+  std::uint16_t nregs;
+  std::uint16_t reg_size;
+  char data[];
 
-  // Returns id of a special kind of register, or -1 if the VM doesn't have it
-  // Response is ids_array
-  struct ReqGetSpecialReg : public ReqBase {
-    RegKind kind;
-    ReqGetSpecialReg(RegKind kind) : kind(kind) {}
-    void accept(Visitor &v) const override { v.visit(*this); }
-  };
+  static void build(Message & req, const vm_reg_t *ids, vm_size_t reg_size,
+                    std::size_t nregs);
 
-  Request(const Request &) = delete;
-  Request(Request &&) = default;
+  vm_reg_t *ids() { return reinterpret_cast<vm_reg_t *>(&data[0]); }
+};
 
-  template <class T> const T &get() {
-    return dynamic_cast<const T &>(_data.get());
+// Get reg values for regs of variable size
+// sent by get_regs()
+ODB_MESSAGE_STRUCT ReqGetRegsVar {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 4;
+
+  std::uint16_t nregs;
+  char data[];
+
+  static void build(Message & req, const vm_reg_t *ids,
+                    const vm_size_t *regs_size, std::size_t nregs);
+
+  vm_reg_t *ids() { return reinterpret_cast<vm_reg_t *>(&data[0]); }
+
+  vm_size_t *sizes() {
+    return reinterpret_cast<vm_size_t *>(&data[nregs * sizeof(vm_reg_t)]);
+  }
+};
+
+// Set reg values for all regs of same size
+// sent by set_regs()
+ODB_MESSAGE_STRUCT ReqSetRegs {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 5;
+
+  std::uint16_t nregs;
+  std::uint16_t reg_size;
+  char data[];
+
+  static void build(Message & req, const vm_reg_t *ids, const char **in_bufs,
+                    vm_size_t reg_size, std::size_t nregs);
+
+  vm_reg_t *ids() { return reinterpret_cast<vm_reg_t *>(&data[0]); }
+
+  char *buff() {
+    return reinterpret_cast<char *>(&data[nregs * sizeof(vm_reg_t)]);
   }
 
-  static Request make_get_reg(vm_reg_t idx) {
-    return Request(Type::get_reg, std::make_unique<ReqGetReg>(idx));
+  char *buff(std::size_t pos) { return buff() + pos * reg_size; }
+};
+
+// Set reg values for regs of variable size
+// sent by set_regs()
+ODB_MESSAGE_STRUCT ReqSetRegsVar {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 6;
+
+  std::uint16_t nregs;
+  char data[];
+
+  static void build(Message & req, const vm_reg_t *ids, const char **in_bufs,
+                    const vm_size_t *reg_size, std::size_t nregs);
+
+  vm_reg_t *ids() { return reinterpret_cast<vm_reg_t *>(&data[0]); }
+
+  char *buff() {
+    return reinterpret_cast<char *>(&data[nregs * sizeof(vm_reg_t)]);
+  }
+};
+
+// Get reg infos for many regs
+// sent by get_regs_infos()
+ODB_MESSAGE_STRUCT ReqGetRegsInfos {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 7;
+
+  std::uint16_t nregs;
+  char data[];
+
+  static void build(Message & req, const vm_reg_t *ids, std::size_t nregs);
+
+  vm_reg_t *ids() { return reinterpret_cast<vm_reg_t *>(&data[0]); }
+};
+
+// Find reg ids given multiple reg names
+// sent by find_regs_ids()
+ODB_MESSAGE_STRUCT ReqGetRegsIds {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 8;
+
+  std::uint16_t nregs;
+  char data[];
+
+  static void build(Message & req, const char **regs_names, std::size_t nregs);
+
+  char *names() { return reinterpret_cast<char *>(&data[0]); }
+};
+
+// Read memory at multiple locations at the same time
+// Sent by read_mem
+ODB_MESSAGE_STRUCT ReqReadMem {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 9;
+
+  std::uint16_t nreads;
+  char data[];
+
+  static void build(Message & req, const vm_ptr_t *src_addrs,
+                    const vm_size_t *bufs_sizes, std::size_t nread);
+
+  vm_ptr_t *src_addrs() { return reinterpret_cast<vm_ptr_t *>(&data[0]); }
+
+  vm_size_t *bufs_sizes() {
+    return reinterpret_cast<vm_size_t *>(&data[nreads * sizeof(vm_ptr_t)]);
+  }
+};
+
+// Write memory at multiple locations at the same time
+// Sent by write_mem
+ODB_MESSAGE_STRUCT ReqWriteMem {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 10;
+
+  std::uint16_t nwrites;
+  char data[];
+
+  static void build(Message & req, const vm_ptr_t *dst_addrs,
+                    const vm_size_t *bufs_sizes, const char **in_bufs,
+                    std::size_t nwrites);
+
+  vm_ptr_t *dst_addrs() { return reinterpret_cast<vm_ptr_t *>(&data[0]); }
+
+  vm_size_t *bufs_sizes() {
+    return reinterpret_cast<vm_size_t *>(&data[nwrites * sizeof(vm_ptr_t)]);
   }
 
-  static Request make_get_reg_infos(vm_reg_t idx) {
-    return Request(Type::get_reg_infos, std::make_unique<ReqGetRegInfos>(idx));
+  char *buff() {
+    return reinterpret_cast<char *>(
+        &data[nwrites * (sizeof(vm_ptr_t) + sizeof(vm_size_t))]);
   }
+};
 
-  static Request make_set_reg(vm_reg_t idx,
-                              const std::vector<std::uint8_t> &bytes) {
-    return Request(Type::set_reg, std::make_unique<ReqSetReg>(idx, bytes));
+// Find symbol infos given their ids
+// Sent by get_symbols_by_ids
+ODB_MESSAGE_STRUCT ReqGetSymbsById {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 11;
+
+  std::uint16_t nsyms;
+  char data[];
+
+  static void build(Message & req, const vm_sym_t *ids, std::size_t nsyms);
+
+  vm_sym_t *ids() { return reinterpret_cast<vm_sym_t *>(&data[0]); }
+};
+
+// Find symbol infos in a given addr range
+// Sent by get_symbols_by_addr
+ODB_MESSAGE_STRUCT ReqGetSymbsByAddr {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 12;
+
+  vm_ptr_t addr;
+  vm_size_t size;
+
+  static void build(Message & req, vm_ptr_t addr, vm_size_t size);
+};
+
+// Find symbol infos given their names
+// Sent by get_symbols_by_names
+ODB_MESSAGE_STRUCT ReqGetSymbsByNames {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 13;
+
+  std::uint16_t nsyms;
+  char data[];
+
+  static void build(Message & req, const char **names, std::size_t nsyms);
+
+  char *names() { return reinterpret_cast<char *>(&data[0]); }
+};
+
+// Add / remove breakpoints
+// Sent by add_breakpoints / del_breakpoints
+ODB_MESSAGE_STRUCT ReqEditBkps {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 14;
+
+  std::uint16_t add_count;
+  std::uint16_t del_count;
+  char data[];
+
+  static void build(Message & req, const vm_ptr_t *add_addrs,
+                    const vm_ptr_t *del_addrs, std::size_t add_count,
+                    std::size_t del_count);
+
+  vm_ptr_t *add_addrs() { return reinterpret_cast<vm_ptr_t *>(&data[0]); }
+
+  vm_ptr_t *del_addrs() {
+    return reinterpret_cast<vm_ptr_t *>(&data[add_count * sizeof(vm_ptr_t)]);
   }
+};
 
-  static Request make_get_special_reg(RegKind kind) {
-    return Request(Type::get_special_reg,
-                   std::make_unique<ReqGetSpecialReg>(kind));
-  }
+// Resume program execution
+// Sent by resume
+ODB_MESSAGE_STRUCT ReqEditResume {
+  static constexpr Message::typeid_t MESSAGE_TYPEID = 15;
 
-private:
-  Request(Type type, std::unique_ptr<ReqBase> &&data)
-      : _type(type), _data(std::move(data)) {}
+  std::uint8_t type;
 
-  Type _type;
-  std::unique_ptr<ReqBase> _data;
+  static void build(Message & req, ResumeType type);
+
+  ResumeType get_type();
 };
 
 } // namespace odb
