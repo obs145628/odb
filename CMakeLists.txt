@@ -19,7 +19,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(tests)
 
+add_subdirectory(src/client)
 add_subdirectory(src/mess)
 add_subdirectory(src/server)
 add_subdirectory(src/server_capi)
 add_subdirectory(src/utils)
+
+add_subdirectory(src/apps/odb-client-simple-cli)

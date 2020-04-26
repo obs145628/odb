@@ -117,6 +117,10 @@ class ClientHandler;
 class Debugger;
 class VMApi;
 class ServerApp;
+class AbstractDataServer;
+class TCPDataServer;
+class CLIClientHandler;
+class DataClientHandler;
 
 struct ServerConfig;
 

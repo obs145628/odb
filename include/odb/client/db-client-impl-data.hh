@@ -1,4 +1,4 @@
-//===-- server/db-client-impl-vmside.hh - DBClientImplVMSide ----*- C++ -*-===//
+//===-- client/db-client-impl-data.hh - DBClientImplData class-*- C++ ---*-===//
 //
 // ODB Library
 // Author: Steven Lariau
@@ -6,8 +6,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of DBClient that runs on the same process than the VM
-/// Can directly make API calls to the debugger
+/// Implementation of DBClient that communicate with serialbuffs
 ///
 //===----------------------------------------------------------------------===//
 
@@ -16,14 +15,18 @@
 #include "../mess/db-client-impl.hh"
 #include "fwd.hh"
 
+#include <memory>
+
 namespace odb {
 
 /// Implementation for the DBClient
-/// Must run on the same process than the VM
-/// Run Debuguer commands by direct API calls
-class DBClientImplVMSide : public DBClientImpl {
+/// Send/recv serialbuff objects
+/// Serialize commands
+/// Use an abstract dataclient responsible for recv/send serialbuffs using any
+/// protocol
+class DBClientImplData : public DBClientImpl {
 public:
-  DBClientImplVMSide(Debugger &db);
+  DBClientImplData(std::unique_ptr<AbstractDataClient> &&dc);
 
   void connect(VMInfos &infos, DBClientUpdate &udp) override;
 
@@ -69,7 +72,7 @@ public:
   void resume(ResumeType type) override;
 
 private:
-  Debugger &_db;
+  std::unique_ptr<AbstractDataClient> _dc;
 };
 
 } // namespace odb

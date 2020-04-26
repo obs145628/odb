@@ -49,6 +49,16 @@ struct ServerConfig {
   // default is true
   // env: ODB_CONF_SERVER_CLI_SIGHANDLER
   bool server_cli_sighandler;
+
+  // If true, a TCP server is run.
+  // Whis this mode, can connect to the Debugger from another process with TCP
+  // client default is false env: ODB_CONF_MODE_TCP=0/1
+  bool mode_tcp;
+
+  // The port the server listens to in TCP_PORT mode
+  // default is 12644
+  // env: ODB_CONF_TCP_PORT=<int>
+  int tcp_port;
 };
 
 /// To setup a DB Server, an instance of this class must be created

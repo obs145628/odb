@@ -1,167 +1,133 @@
 #include "odb/mess/request.hh"
 
-#include <cstring>
+#include <cstdint>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+#include "odb/mess/db-client.hh"
+#include "odb/mess/request-handler.hh"
+#include "odb/server/fwd.hh"
+
+// @xtra I had issues of ambigious call using enable_uf
+#define RAW_SERIAL(Ty)                                                         \
+  template <> void sb_serialize(SerialOutBuff &os, const Ty &x) {              \
+    sb_serial_raw<Ty>(os, x);                                                  \
+  }                                                                            \
+                                                                               \
+  template <> void sb_unserialize(SerialInBuff &is, Ty &x) {                   \
+    x = sb_unserial_raw<Ty>(is);                                               \
+  }
+
+#if 0
+template <class T>
+std::enable_if_t<std::is_integral_v<T>> sb_serialize(SerialOutBuff &os,
+                                                     const T &x) {
+  sb_serial_raw<T>(os, x);
+}
+
+template <class T>
+std::enable_if_t<std::is_integral_v<T>> sb_unserialize(SerialInBuff &is, T &x) {
+  x = sb_unserial_raw<T>(is);
+}
+#endif
 
 namespace odb {
 
-void ReqInit::build(Message &req) {
-  auto &r = req.alloc_as<ReqInit>();
-  r.tag = 0;
+template <> void prepare_request(RequestHandler &h, ReqConnect &r) {
+  h.object_out(r.out_infos);
+  h.object_out(r.out_udp);
 }
 
-void ReqUpdate::build(Message &req) {
-  auto &r = req.alloc_as<ReqUpdate>();
-  r.tag = 0;
+RAW_SERIAL(std::uint8_t)
+RAW_SERIAL(std::uint16_t)
+RAW_SERIAL(std::uint32_t)
+RAW_SERIAL(std::uint64_t)
+RAW_SERIAL(std::int8_t)
+RAW_SERIAL(std::int16_t)
+RAW_SERIAL(std::int32_t)
+RAW_SERIAL(std::int64_t)
+
+template <> void sb_serialize(SerialOutBuff &os, const ReqType &ty) {
+  sb_serial_raw(os, static_cast<std::int8_t>(ty));
 }
 
-void ReqGetRegs::build(Message &req, const vm_reg_t *ids, vm_size_t reg_size,
-                       std::size_t nregs) {
-  auto &r = req.alloc_as<ReqGetRegs>(nregs * sizeof(vm_reg_t));
-  r.nregs = nregs;
-  r.reg_size = reg_size;
-  std::memcpy(r.ids(), ids, nregs * sizeof(vm_reg_t));
+template <> void sb_unserialize(SerialInBuff &is, ReqType &ty) {
+  ty = static_cast<ReqType>(sb_unserial_raw<std::int8_t>(is));
 }
 
-void ReqGetRegsVar::build(Message &req, const vm_reg_t *ids,
-                          const vm_size_t *regs_size, std::size_t nregs) {
-  auto &r = req.alloc_as<ReqGetRegsVar>(nregs *
-                                        (sizeof(vm_reg_t) + sizeof(vm_size_t)));
-  r.nregs = nregs;
-  std::memcpy(r.ids(), ids, nregs * sizeof(vm_reg_t));
-  std::memcpy(r.sizes(), regs_size, nregs * sizeof(vm_size_t));
+template <> void sb_serialize(SerialOutBuff &os, const std::string &s) {
+  sb_serial_raw<std::uint64_t>(os, s.size());
+  os.write(s.c_str(), s.size());
 }
 
-void ReqSetRegs::build(Message &req, const vm_reg_t *ids, const char **in_bufs,
-                       vm_size_t reg_size, std::size_t nregs) {
-  auto &r = req.alloc_as<ReqSetRegs>(nregs * (sizeof(vm_reg_t) + reg_size));
-  r.nregs = nregs;
-  r.reg_size = reg_size;
-  std::memcpy(r.ids(), ids, nregs * sizeof(vm_reg_t));
-  for (std::size_t i = 0; i < nregs; ++i)
-    std::memcpy(r.buff(i), in_bufs[i], reg_size);
+template <> void sb_unserialize(SerialInBuff &is, std::string &s) {
+  auto size = sb_unserial_raw<std::uint64_t>(is);
+  s.resize(size);
+  is.read(&s[0], size);
 }
 
-void ReqSetRegsVar::build(Message &req, const vm_reg_t *ids,
-                          const char **in_bufs, const vm_size_t *reg_size,
-                          std::size_t nregs) {
-  std::size_t total_size = nregs * sizeof(vm_reg_t);
-  for (std::size_t i = 0; i < nregs; ++i)
-    total_size += reg_size[i];
-
-  auto &r = req.alloc_as<ReqSetRegs>(total_size);
-  r.nregs = nregs;
-
-  std::memcpy(r.ids(), ids, nregs * sizeof(vm_reg_t));
-  char *buff = r.buff();
-  for (std::size_t i = 0; i < nregs; ++i) {
-    std::memcpy(buff, in_bufs[i], reg_size[i]);
-    buff += reg_size[i];
-  }
+template <class T>
+void sb_serialize(SerialOutBuff &os, const std::vector<T> &v) {
+  sb_serial_raw<std::uint64_t>(os, v.size());
+  for (std::size_t i = 0; i < v.size(); ++i)
+    os << v[i];
 }
 
-void ReqGetRegsInfos::build(Message &req, const vm_reg_t *ids,
-                            std::size_t nregs) {
-  auto &r = req.alloc_as<ReqGetRegsInfos>(nregs * sizeof(vm_reg_t));
-  r.nregs = nregs;
-  std::memcpy(r.ids(), ids, nregs * sizeof(vm_reg_t));
+// @extra doesn't work if T have no default constructor
+template <class T> void sb_unserialize(SerialInBuff &is, std::vector<T> &v) {
+  auto size = sb_unserial_raw<std::uint64_t>(is);
+  v.resize(size);
+  for (std::size_t i = 0; i < v.size(); ++i)
+    is >> v[i];
 }
 
-void ReqReadMem::build(Message &req, const vm_ptr_t *src_addrs,
-                       const vm_size_t *bufs_sizes, std::size_t nread) {
-  auto &r =
-      req.alloc_as<ReqReadMem>(nread * (sizeof(vm_ptr_t) + sizeof(vm_size_t)));
-  r.nreads = nread;
-  std::memcpy(r.src_addrs(), src_addrs, nread * sizeof(vm_ptr_t));
-  std::memcpy(r.bufs_sizes(), bufs_sizes, nread * sizeof(vm_size_t));
+template <> void sb_serialize(SerialOutBuff &os, const VMInfos &infos) {
+  os << infos.name << infos.regs_count << infos.regs_general
+     << infos.regs_program_counter << infos.regs_stack_pointer
+     << infos.regs_base_pointer << infos.regs_flags << infos.memory_size
+     << infos.symbols_count << infos.pointer_size << infos.integer_size;
+
+  sb_serial_raw<std::uint8_t>(os, infos.use_opcode);
 }
 
-void ReqWriteMem::build(Message &req, const vm_ptr_t *dst_addrs,
-                        const vm_size_t *bufs_sizes, const char **in_bufs,
-                        std::size_t nwrites) {
-  std::size_t total_size = nwrites * (sizeof(vm_ptr_t) + sizeof(vm_size_t));
-  for (std::size_t i = 0; i < nwrites; ++i)
-    total_size += bufs_sizes[i];
-  auto &r = req.alloc_as<ReqWriteMem>(total_size);
+template <> void sb_unserialize(SerialInBuff &is, VMInfos &infos) {
+  is >> infos.name >> infos.regs_count >> infos.regs_general >>
+      infos.regs_program_counter >> infos.regs_stack_pointer >>
+      infos.regs_base_pointer >> infos.regs_flags >> infos.memory_size >>
+      infos.symbols_count >> infos.pointer_size >> infos.integer_size;
 
-  r.nwrites = nwrites;
-  std::memcpy(r.dst_addrs(), dst_addrs, nwrites * sizeof(vm_ptr_t));
-  std::memcpy(r.bufs_sizes(), bufs_sizes, nwrites * sizeof(vm_size_t));
-
-  char *buff = r.buff();
-  for (std::size_t i = 0; i < nwrites; ++i) {
-    std::memcpy(buff, in_bufs[i], bufs_sizes[i]);
-    buff += bufs_sizes[i];
-  }
+  infos.use_opcode = sb_unserial_raw<std::uint8_t>(is);
 }
 
-void ReqGetSymbsById::build(Message &req, const vm_sym_t *ids,
-                            std::size_t nsyms) {
-  auto &r = req.alloc_as<ReqGetSymbsById>(nsyms * sizeof(vm_sym_t));
-  r.nsyms = nsyms;
-  std::memcpy(r.ids(), ids, nsyms * sizeof(vm_sym_t));
+template <> void sb_serialize(SerialOutBuff &os, const StoppedState &e) {
+  sb_serial_raw(os, static_cast<std::int8_t>(e));
 }
 
-void ReqGetSymbsByAddr::build(Message &req, vm_ptr_t addr, vm_size_t size) {
-  auto &r = req.alloc_as<ReqGetSymbsByAddr>();
-  r.addr = addr;
-  r.size = size;
+template <> void sb_unserialize(SerialInBuff &is, StoppedState &e) {
+  e = static_cast<StoppedState>(sb_unserial_raw<std::int8_t>(is));
 }
 
-void ReqGetSymbsByNames::build(Message &req, const char **names,
-                               std::size_t nsyms) {
-  std::size_t total_size = 0;
-  for (std::size_t i = 0; i < nsyms; ++i)
-    total_size += std::strlen(names[i]) + 1;
-  auto &r = req.alloc_as<ReqGetSymbsByNames>(total_size);
-  r.nsyms = nsyms;
-
-  char *buff = r.names();
-  for (std::size_t i = 0; i < nsyms; ++i) {
-    std::size_t len = strlen(names[i]) + 1;
-    std::memcpy(buff, names[i], len);
-    buff += len;
-  }
+template <> void sb_serialize(SerialOutBuff &os, const CallInfos &ci) {
+  os << ci.caller_start_addr << ci.call_addr;
 }
 
-void ReqEditBkps::build(Message &req, const vm_ptr_t *add_addrs,
-                        const vm_ptr_t *del_addrs, std::size_t add_count,
-                        std::size_t del_count) {
-  auto r =
-      req.alloc_as<ReqEditBkps>((add_count + del_count) * sizeof(vm_ptr_t));
-  r.add_count = add_count;
-  r.del_count = del_count;
-
-  std::memcpy(r.add_addrs(), add_addrs, add_count * sizeof(vm_ptr_t));
-  std::memcpy(r.del_addrs(), del_addrs, del_count * sizeof(vm_ptr_t));
+template <> void sb_unserialize(SerialInBuff &is, CallInfos &ci) {
+  is >> ci.caller_start_addr >> ci.call_addr;
 }
 
-void ReqEditResume::build(Message &req, ResumeType type) {
-  auto &r = req.alloc_as<ReqEditResume>();
-  switch (type) {
-  case ResumeType::ToFinish:
-    r.type = 0;
-    break;
-  case ResumeType::Continue:
-    r.type = 1;
-    break;
-  case ResumeType::Step:
-    r.type = 2;
-    break;
-  case ResumeType::StepOver:
-    r.type = 3;
-    break;
-  case ResumeType::StepOut:
-    r.type = 4;
-    break;
-  };
+template <> void sb_serialize(SerialOutBuff &os, const DBClientUpdate &udp) {
+  os << udp.vm_state;
+  sb_serial_raw<std::uint8_t>(os, udp.stopped);
+  os << udp.addr;
+  os << udp.stack;
 }
 
-ResumeType ReqEditResume::get_type() {
-
-  ResumeType types[] = {ResumeType::ToFinish, ResumeType::Continue,
-                        ResumeType::Step, ResumeType::StepOver,
-                        ResumeType::StepOut};
-  return types[type];
+template <> void sb_unserialize(SerialInBuff &is, DBClientUpdate &udp) {
+  is >> udp.vm_state;
+  udp.stopped = sb_unserial_raw<std::uint8_t>(is);
+  is >> udp.addr;
+  is >> udp.stack;
 }
 
 } // namespace odb

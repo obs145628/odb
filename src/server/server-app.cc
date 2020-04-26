@@ -18,6 +18,8 @@ const ServerConfig g_conf_default = {
     .nostart = false,
     .mode_server_cli = false,
     .server_cli_sighandler = true,
+    .mode_tcp = false,
+    .tcp_port = 12644,
 };
 
 constexpr const char *ENV_CONF_ENABLED = "ODB_CONF_ENABLED";
@@ -25,6 +27,8 @@ constexpr const char *ENV_CONF_NOSTART = "ODB_CONF_NOSTART";
 constexpr const char *ENV_CONF_MODE_SERVER_CLI = "ODB_CONF_MODE_SERVER_CLI";
 constexpr const char *ENV_CONF_SERVER_CLI_SIGHANDLER =
     "ODB_CONF_SERVER_CLI_SIGHANDLER";
+constexpr const char *ENV_CONF_MODE_TCP = "ODB_CONF_MODE_TCP";
+constexpr const char *ENV_CONF_TCP_PORT = "ODB_CONF_TCP_PORT";
 } // namespace
 
 bool ServerApp::g_force_stop_db = false;
@@ -50,6 +54,14 @@ ServerApp::ServerApp(const ServerConfig &conf, const api_builder_f &api_builder)
   if (env_conf_server_cli_sighandler)
     _conf.server_cli_sighandler =
         std::strcmp(env_conf_server_cli_sighandler, "1") == 0;
+
+  auto env_mode_tcp = std::getenv(ENV_CONF_MODE_TCP);
+  if (env_mode_tcp)
+    _conf.mode_tcp = std::strcmp(env_mode_tcp, "1") == 0;
+
+  auto env_tcp_port = std::getenv(ENV_CONF_TCP_PORT);
+  if (env_tcp_port)
+    _conf.tcp_port = std::atoi(env_tcp_port);
 }
 
 ServerApp::ServerApp(const api_builder_f &api_builder)
