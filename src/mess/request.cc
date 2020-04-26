@@ -39,6 +39,36 @@ template <> void prepare_request(RequestHandler &h, ReqConnect &r) {
   h.object_out(r.out_udp);
 }
 
+template <> void prepare_request(RequestHandler &, ReqStop &) {}
+
+template <> void prepare_request(RequestHandler &h, ReqCheckStopped &r) {
+  h.object_out(r.out_udp);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqGetRegs &r) {
+  h.object_in(r.nregs);
+  h.object_in(r.reg_size);
+  h.buffer_in(r.ids, r.nregs);
+  h.buffer_2d_out(r.out_bufs, r.nregs, r.reg_size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqGetRegsInfos &r) {
+  h.object_in(r.nregs);
+  h.buffer_in(r.ids, r.nregs);
+  h.buffer_out(r.out_infos, r.nregs);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqFindRegsIds &r) {
+  h.object_in(r.nregs);
+  h.buffer_2d_in_cstr(r.in_bufs, r.nregs);
+  h.buffer_out(r.out_ids, r.nregs);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqErr &r) {
+  h.object_out(r.msg);
+}
+
+RAW_SERIAL(char)
 RAW_SERIAL(std::uint8_t)
 RAW_SERIAL(std::uint16_t)
 RAW_SERIAL(std::uint32_t)
@@ -128,6 +158,22 @@ template <> void sb_unserialize(SerialInBuff &is, DBClientUpdate &udp) {
   udp.stopped = sb_unserial_raw<std::uint8_t>(is);
   is >> udp.addr;
   is >> udp.stack;
+}
+
+template <> void sb_serialize(SerialOutBuff &os, const RegKind &e) {
+  sb_serial_raw(os, static_cast<std::int8_t>(e));
+}
+
+template <> void sb_unserialize(SerialInBuff &is, RegKind &e) {
+  e = static_cast<RegKind>(sb_unserial_raw<std::int8_t>(is));
+}
+
+template <> void sb_serialize(SerialOutBuff &os, const RegInfos &reg) {
+  os << reg.idx << reg.name << reg.size << reg.kind;
+}
+
+template <> void sb_unserialize(SerialInBuff &is, RegInfos &reg) {
+  is >> reg.idx >> reg.name >> reg.size >> reg.kind;
 }
 
 } // namespace odb

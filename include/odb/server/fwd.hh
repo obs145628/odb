@@ -37,7 +37,7 @@ struct CallInfos {
 using CallStack = std::vector<CallInfos>;
 
 enum class RegKind {
-  general,
+  general = 0,
   program_counter,
   stack_pointer,
   base_pointer,
@@ -45,13 +45,13 @@ enum class RegKind {
 };
 
 enum class StoppedState {
-  READY, // Program ready to execute next instruction
-  EXIT,  // Program exited
-  ERROR, // Program aborted because of an error
+  READY = 0, // Program ready to execute next instruction
+  EXIT,      // Program exited
+  ERROR,     // Program aborted because of an error
 };
 
 enum class ResumeType {
-  ToFinish, // run program until exit or crash, ignoring all breakpoints
+  ToFinish = 0, // run program until exit or crash, ignoring all breakpoints
 
   Continue, // run until next breakpoint
 

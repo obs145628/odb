@@ -148,14 +148,77 @@ void DataClientHandler::run_command() {
 
   ReqType is_ty;
   is >> is_ty;
-  assert(is_ty == ReqType::CONNECT);
 
-  ReqConnect req;
-  rh.server_read_request(is, req);
-  dc.connect(req.out_infos, req.out_udp);
+  try {
+    // @tip code duplication, could factorize with macros, but code wouldn't
+    // look much like valid C++.
+    switch (is_ty) {
+    case ReqType::CONNECT: {
+      ReqConnect req;
+      rh.server_read_request(is, req);
+      dc.connect(req.out_infos, req.out_udp);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    }
 
-  os << is_ty;
-  rh.server_write_response(os, req);
+    case ReqType::STOP: {
+      ReqStop req;
+      rh.server_read_request(is, req);
+      dc.stop();
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    }
+
+    case ReqType::CHECK_STOPPED: {
+      ReqCheckStopped req;
+      rh.server_read_request(is, req);
+      dc.check_stopped(req.out_udp);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::GET_REGS: {
+      ReqGetRegs req;
+      rh.server_read_request(is, req);
+      vm_size_t regs_sizes[2] = {req.reg_size, 0};
+      dc.get_regs(req.ids, req.out_bufs, regs_sizes, req.nregs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::GET_REGS_INFOS: {
+      ReqGetRegsInfos req;
+      rh.server_read_request(is, req);
+      dc.get_regs_infos(req.ids, req.out_infos, req.nregs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::FIND_REGS_IDS: {
+      ReqFindRegsIds req;
+      rh.server_read_request(is, req);
+      dc.find_regs_ids((const char **)req.in_bufs, req.out_ids, req.nregs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    default:
+      throw VMApi::Error("Bad API request");
+    }
+
+  } catch (VMApi::Error &e) {
+    ReqErr err;
+    err.msg = e.what();
+    os << ReqType::ERR;
+    rh.server_write_response(os, err);
+  }
+
   _runner->signal_res();
 }
 

@@ -19,6 +19,9 @@
 
 namespace odb {
 
+// Internal class to avoid include of all the nasty template seralization stuff
+class DBClientImplData_Internal;
+
 /// Implementation for the DBClient
 /// Send/recv serialbuff objects
 /// Serialize commands
@@ -27,6 +30,8 @@ namespace odb {
 class DBClientImplData : public DBClientImpl {
 public:
   DBClientImplData(std::unique_ptr<AbstractDataClient> &&dc);
+
+  ~DBClientImplData() override;
 
   void connect(VMInfos &infos, DBClientUpdate &udp) override;
 
@@ -72,7 +77,7 @@ public:
   void resume(ResumeType type) override;
 
 private:
-  std::unique_ptr<AbstractDataClient> _dc;
+  std::unique_ptr<DBClientImplData_Internal> _impl;
 };
 
 } // namespace odb

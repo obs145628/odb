@@ -30,6 +30,10 @@ public:
     _bufs.push_back(std::make_unique<char[]>(buf_size));
     char *buf = _bufs.back().get();
     T *tbuf = reinterpret_cast<T *>(buf);
+
+    for (std::size_t i = 0; i < size; ++i)
+      new (&tbuf[i]) T{};
+
     return tbuf;
   }
 
@@ -54,6 +58,15 @@ public:
       *_in >> ptr[i];
   }
 
+  template <class T>
+  void buffer_2d_out(T **&ptr, std::size_t size1, std::size_t size2) {
+    for (std::size_t i = 0; i < size1; ++i)
+      for (std::size_t j = 0; j < size2; ++j)
+        *_in >> ptr[i][j];
+  }
+
+  void buffer_2d_in_cstr(char **&, std::size_t) {}
+
 private:
   SerialInBuff *_in;
 };
@@ -74,6 +87,23 @@ public:
   }
 
   template <class T> void buffer_out(T *&, std::size_t) {}
+
+  template <class T> void buffer_2d_out(T **&, std::size_t, std::size_t) {}
+
+  void buffer_2d_in_cstr(char **&ptr, std::size_t size) {
+    // data is serialized as one big linear array of cstr, with \0 included
+    // and the size of this linear array is written first (before array)
+
+    // compute and write size
+    std::size_t total_size = 0;
+    for (std::size_t i = 0; i < size; ++i)
+      total_size += std::strlen(ptr[i]) + 1;
+    sb_serial_raw<std::uint16_t>(*_out, total_size);
+
+    // Write all strs
+    for (std::size_t i = 0; i < size; ++i)
+      _out->write(ptr[i], std::strlen(ptr[i]) + 1);
+  }
 
 private:
   SerialOutBuff *_out;
@@ -103,6 +133,37 @@ public:
     ptr = _tb.add_buff<T>(size);
   }
 
+  template <class T>
+  void buffer_2d_out(T **&ptr, std::size_t size1, std::size_t size2) {
+    // Alloc contiguous big buffer, and buffer of indirections
+    T *all_buff = _tb.add_buff<T>(size1 * size2);
+    T **dir_buff = _tb.add_buff<T *>(size1);
+
+    // Make indirections point to all_buff
+    for (std::size_t i = 0; i < size1; ++i)
+      dir_buff[i] = &all_buff[i * size2];
+
+    ptr = dir_buff;
+  }
+
+  void buffer_2d_in_cstr(char **&ptr, std::size_t size) {
+    // Create and load full data buffer
+    auto total_size = sb_unserial_raw<std::uint16_t>(*_in);
+    char *full_buf = _tb.add_buff<char>(total_size);
+    _in->read(full_buf, total_size);
+
+    // Create and load indirection buffer
+    char **dir_buf = _tb.add_buff<char *>(size);
+    char *str = full_buf;
+    for (std::size_t i = 0; i < size; ++i) {
+      dir_buf[i] = str;
+      auto str_size = std::strlen(str) + 1;
+      str += str_size;
+    }
+
+    ptr = dir_buf;
+  }
+
 private:
   SerialInBuff *_in;
   TmpBuffHolder _tb;
@@ -124,6 +185,15 @@ public:
     for (std::size_t i = 0; i < size; ++i)
       *_out << ptr[i];
   }
+
+  template <class T>
+  void buffer_2d_out(T **&ptr, std::size_t size1, std::size_t size2) {
+    for (std::size_t i = 0; i < size1; ++i)
+      for (std::size_t j = 0; j < size2; ++j)
+        *_out << ptr[i][j];
+  }
+
+  void buffer_2d_in_cstr(char **&, std::size_t) {}
 
 private:
   SerialOutBuff *_out;
@@ -158,6 +228,22 @@ private:
     break;                                                                     \
   case Mode::SERV_SEND:                                                        \
     _h_serv_send.Meth(V0, V1);                                                 \
+    break;                                                                     \
+  };
+
+#define HANDLER_DISPATCH3(Meth, V0, V1, V2)                                    \
+  switch (_mode) {                                                             \
+  case Mode::CLI_RECV:                                                         \
+    _h_cli_recv.Meth(V0, V1, V2);                                              \
+    break;                                                                     \
+  case Mode::CLI_SEND:                                                         \
+    _h_cli_send.Meth(V0, V1, V2);                                              \
+    break;                                                                     \
+  case Mode::SERV_RECV:                                                        \
+    _h_serv_recv.Meth(V0, V1, V2);                                             \
+    break;                                                                     \
+  case Mode::SERV_SEND:                                                        \
+    _h_serv_send.Meth(V0, V1, V2);                                             \
     break;                                                                     \
   };
 
@@ -235,6 +321,21 @@ public:
   /// When response received, content unserialized into `ptr`
   template <class T> void buffer_out(T *&ptr, std::size_t size) {
     HANDLER_DISPATCH2(buffer_out, ptr, size);
+  }
+
+  /// Add a buffer T[size1][size2], with indirection pointer
+  /// When request is received, a buffer is allocated to hold these items
+  /// When response send, this buffer content is serialized
+  /// When response received, content unserialized into `ptr`
+  template <class T>
+  void buffer_2d_out(T **&ptr, std::size_t size1, std::size_t size2) {
+    HANDLER_DISPATCH3(buffer_2d_out, ptr, size1, size2);
+  }
+
+  /// Like buffer_2d_in, but this a special version to handle zero-terminated
+  /// strings of varying size
+  void buffer_2d_in_cstr(char **&ptr, std::size_t size) {
+    HANDLER_DISPATCH2(buffer_2d_in_cstr, ptr, size);
   }
 
 private:

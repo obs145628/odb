@@ -39,6 +39,11 @@ bool TCPDataServer::connect() {
   if ((_serv_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     return err("Failed to create socket");
 
+  // avoid bind error
+  int yes = 1;
+  if (setsockopt(_serv_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
+    return err("setsockopt failed");
+
   struct sockaddr_in serv_addr;
   memset(&serv_addr, 0, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
