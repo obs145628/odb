@@ -61,3 +61,15 @@ TEST_CASE("simplecli_on_server call_sum smem", "") {
 TEST_CASE("simplecli_on_server call_sum pmem_bases", "") {
   test_call_sum_pmem_bases(SimpleCLIMode::ON_SERVER);
 }
+
+TEST_CASE("simplecli_with_tcp call_sum pmem", "") {
+  test_call_sum_pmem(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_sum smem", "") {
+  test_call_sum_smem(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_sum pmem_bases", "") {
+  test_call_sum_pmem_bases(SimpleCLIMode::WITH_TCP);
+}

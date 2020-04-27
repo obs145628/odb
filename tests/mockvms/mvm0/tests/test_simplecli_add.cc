@@ -244,7 +244,7 @@ void test_call_add_continue_short(SimpleCLIMode mode) {
                      "c\n"
                      "c\n"
                      "c\n"
-    "c\n";
+                     "c\n";
   auto vals = str_split(run_simplecli(mode, PATH_CALL_ADD, cmds), '\n');
   REQUIRE(vals.size() == 9);
   REQUIRE(vals[0] == "program stopped at 0x400 (<_begin> + 0x0)");
@@ -284,7 +284,7 @@ void test_call_add_step(SimpleCLIMode mode) {
           "Error: cannot resume execution: program already finished");
 }
 
-  void test_call_add_step_short(SimpleCLIMode mode) {
+void test_call_add_step_short(SimpleCLIMode mode) {
   const char *cmds = ""
                      "s\n"
                      "s\n"
@@ -498,4 +498,72 @@ TEST_CASE("simplecli_on_server call_add state", "") {
 
 TEST_CASE("simplecli_on_server call_add bt", "") {
   test_call_add_bt(SimpleCLIMode::ON_SERVER);
+}
+
+TEST_CASE("simplecli_with_tcp call_add preg", "") {
+  test_call_add_preg(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add sreg", "") {
+  test_call_add_sreg(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add pregi", "") {
+  test_call_add_pregi(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add pmem", "") {
+  test_call_add_pmem(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add psym", "") {
+  test_call_add_psym(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add b", "") {
+  test_call_add_b(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add delb", "") {
+  test_call_add_delb(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add continue", "") {
+  test_call_add_continue(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add continue_short", "") {
+  test_call_add_continue_short(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add step", "") {
+  test_call_add_step(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add step_short", "") {
+  test_call_add_step_short(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add next", "") {
+  test_call_add_next(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add next_short", "") {
+  test_call_add_next_short(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add finish", "") {
+  test_call_add_finish(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add finish_short", "") {
+  test_call_add_finish_short(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add state", "") {
+  test_call_add_state(SimpleCLIMode::WITH_TCP);
+}
+
+TEST_CASE("simplecli_with_tcp call_add bt", "") {
+  test_call_add_bt(SimpleCLIMode::WITH_TCP);
 }
