@@ -53,6 +53,11 @@ public:
 
   template <class T> void buffer_in(T *, std::size_t) {}
 
+  template <class T> void buffer_2d_in(T **&, std::size_t, std::size_t) {}
+
+  template <class T, class Sizes>
+  void buffer_2dvar_in(T **&, std::size_t, Sizes *) {}
+
   template <class T> void buffer_out(T *&ptr, std::size_t size) {
     for (std::size_t i = 0; i < size; ++i)
       *_in >> ptr[i];
@@ -62,6 +67,13 @@ public:
   void buffer_2d_out(T **&ptr, std::size_t size1, std::size_t size2) {
     for (std::size_t i = 0; i < size1; ++i)
       for (std::size_t j = 0; j < size2; ++j)
+        *_in >> ptr[i][j];
+  }
+
+  template <class T, class Sizes>
+  void buffer_2dvar_out(T **&ptr, std::size_t size1, Sizes *sizes2) {
+    for (std::size_t i = 0; i < size1; ++i)
+      for (Sizes j = 0; j < sizes2[i]; ++j)
         *_in >> ptr[i][j];
   }
 
@@ -86,9 +98,26 @@ public:
       *_out << ptr[i];
   }
 
+  template <class T>
+  void buffer_2d_in(T **&ptr, std::size_t size1, std::size_t size2) {
+    for (std::size_t i = 0; i < size1; ++i)
+      for (std::size_t j = 0; j < size2; ++j)
+        *_out << ptr[i][j];
+  }
+
+  template <class T, class Sizes>
+  void buffer_2dvar_in(T **&ptr, std::size_t size1, Sizes *sizes2) {
+    for (std::size_t i = 0; i < size1; ++i)
+      for (Sizes j = 0; j < sizes2[i]; ++j)
+        *_out << ptr[i][j];
+  }
+
   template <class T> void buffer_out(T *&, std::size_t) {}
 
   template <class T> void buffer_2d_out(T **&, std::size_t, std::size_t) {}
+
+  template <class T, class Sizes>
+  void buffer_2dvar_out(T **&, std::size_t, Sizes *) {}
 
   void buffer_2d_in_cstr(char **&ptr, std::size_t size) {
     // data is serialized as one big linear array of cstr, with \0 included
@@ -129,6 +158,44 @@ public:
     ptr = tbuf;
   }
 
+  template <class T>
+  void buffer_2d_in(T **&ptr, std::size_t size1, std::size_t size2) {
+    // Create big buffer and store all content inside
+    T *all_buf = _tb.add_buff<T>(size1 * size2);
+    for (std::size_t i = 0; i < size1 * size2; ++i)
+      *_in >> all_buf[i];
+
+    // Create indirections buffer pointing to all_buf
+    T **dir_buf = _tb.add_buff<T *>(size1);
+    for (std::size_t i = 0; i < size1; ++i)
+      dir_buf[i] = &all_buf[i * size2];
+
+    ptr = dir_buf;
+  }
+
+  template <class T, class Sizes>
+  void buffer_2dvar_in(T **&ptr, std::size_t size1, Sizes *sizes2) {
+    // Compute total size
+    Sizes all_size = 0;
+    for (std::size_t i = 0; i < size1; ++i)
+      all_size += sizes2[i];
+
+    // Create big buffer and store all content inside
+    T *all_buf = _tb.add_buff<T>(all_size);
+    for (Sizes i = 0; i < all_size; ++i)
+      *_in >> all_buf[i];
+
+    // Create indirections buffer pointing to all_buf
+    T **dir_buf = _tb.add_buff<T *>(size1);
+    T *cur_ptr = all_buf;
+    for (std::size_t i = 0; i < size1; ++i) {
+      dir_buf[i] = cur_ptr;
+      cur_ptr += sizes2[i];
+    }
+
+    ptr = dir_buf;
+  }
+
   template <class T> void buffer_out(T *&ptr, std::size_t size) {
     ptr = _tb.add_buff<T>(size);
   }
@@ -142,6 +209,27 @@ public:
     // Make indirections point to all_buff
     for (std::size_t i = 0; i < size1; ++i)
       dir_buff[i] = &all_buff[i * size2];
+
+    ptr = dir_buff;
+  }
+
+  template <class T, class Sizes>
+  void buffer_2dvar_out(T **&ptr, std::size_t size1, Sizes *sizes2) {
+    // Compute full size of 2d matrix
+    Sizes total_size = 0;
+    for (std::size_t i = 0; i < size1; ++i)
+      total_size += sizes2[i];
+
+    // Alloc contiguous big buffer, and buffer of indirections
+    T *all_buff = _tb.add_buff<T>(total_size);
+    T **dir_buff = _tb.add_buff<T *>(size1);
+
+    // Make indirections point to all_buff
+    T *cur_ptr = all_buff;
+    for (std::size_t i = 0; i < size1; ++i) {
+      dir_buff[i] = cur_ptr;
+      cur_ptr += sizes2[i];
+    }
 
     ptr = dir_buff;
   }
@@ -181,6 +269,11 @@ public:
 
   template <class T> void buffer_in(T *&, std::size_t) {}
 
+  template <class T> void buffer_2d_in(T **&, std::size_t, std::size_t) {}
+
+  template <class T, class Sizes>
+  void buffer_2dvar_in(T **&, std::size_t, Sizes *) {}
+
   template <class T> void buffer_out(T *&ptr, std::size_t size) {
     for (std::size_t i = 0; i < size; ++i)
       *_out << ptr[i];
@@ -190,6 +283,13 @@ public:
   void buffer_2d_out(T **&ptr, std::size_t size1, std::size_t size2) {
     for (std::size_t i = 0; i < size1; ++i)
       for (std::size_t j = 0; j < size2; ++j)
+        *_out << ptr[i][j];
+  }
+
+  template <class T, class Sizes>
+  void buffer_2dvar_out(T **&ptr, std::size_t size1, Sizes *sizes2) {
+    for (std::size_t i = 0; i < size1; ++i)
+      for (Sizes j = 0; j < sizes2[i]; ++j)
         *_out << ptr[i][j];
   }
 
@@ -315,6 +415,24 @@ public:
     HANDLER_DISPATCH2(buffer_in, ptr, size);
   }
 
+  /// Add a buffer T[size1][size2], with indirection pointer
+  /// When request sent, the whole 2d content is serialized
+  /// When the request is received, the buffer is unserialized into some
+  /// temporary memory, and a temporary indirection buffer with right pointer
+  /// is set And `ptr` is set to point to this temporary indirection buffer
+  /// The memory is valid until the response is sent
+  template <class T>
+  void buffer_2d_in(T **&ptr, std::size_t size1, std::size_t size2) {
+    HANDLER_DISPATCH3(buffer_2d_in, ptr, size1, size2);
+  }
+
+  /// Similar to buffer_2d_in, but second dimension varies
+  /// the size of each T[i] is sizes2[i]
+  template <class T, class Sizes>
+  void buffer_2dvar_in(T **&ptr, std::size_t size1, Sizes *sizes2) {
+    HANDLER_DISPATCH3(buffer_2dvar_in, ptr, size1, sizes2);
+  }
+
   /// Add a buffer of size items of type T
   /// When request is received, a buffer is allocated to hold these items
   /// When response send, this buffer content is serialized
@@ -330,6 +448,13 @@ public:
   template <class T>
   void buffer_2d_out(T **&ptr, std::size_t size1, std::size_t size2) {
     HANDLER_DISPATCH3(buffer_2d_out, ptr, size1, size2);
+  }
+
+  /// Similar to buffer_2d_out, but second dimension varies
+  /// the size of each T[i] is sizes2[i]
+  template <class T, class Sizes>
+  void buffer_2dvar_out(T **&ptr, std::size_t size1, Sizes *sizes2) {
+    HANDLER_DISPATCH3(buffer_2dvar_out, ptr, size1, sizes2);
   }
 
   /// Like buffer_2d_in, but this a special version to handle zero-terminated

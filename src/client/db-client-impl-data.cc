@@ -90,22 +90,37 @@ void DBClientImplData::get_regs(const vm_reg_t *ids, char **out_bufs,
   }
 
   else {
-    assert(0);
+    ReqGetRegsVar req;
+    req.nregs = nregs;
+    req.in_ids = const_cast<vm_reg_t *>(ids);
+    req.in_regs_size = const_cast<vm_size_t *>(regs_size);
+    req.out_bufs = out_bufs;
+    _impl->send_req(req);
   }
-
-  (void)ids;
-  (void)out_bufs;
-  (void)regs_size;
-  (void)nregs;
 }
 
 void DBClientImplData::set_regs(const vm_reg_t *ids, const char **in_bufs,
                                 const vm_size_t *regs_size, std::size_t nregs) {
-  (void)ids;
-  (void)in_bufs;
-  (void)regs_size;
-  (void)nregs;
-  assert(0);
+  if (nregs == 0)
+    return;
+
+  if (nregs < 2 || regs_size[1] == 0) {
+    ReqSetRegs req;
+    req.nregs = nregs;
+    req.reg_size = regs_size[0];
+    req.in_ids = const_cast<vm_reg_t *>(ids);
+    req.in_bufs = const_cast<char **>(in_bufs);
+    _impl->send_req(req);
+  }
+
+  else {
+    ReqSetRegsVar req;
+    req.nregs = nregs;
+    req.in_ids = const_cast<vm_reg_t *>(ids);
+    req.in_regs_size = const_cast<vm_size_t *>(regs_size);
+    req.in_bufs = const_cast<char **>(in_bufs);
+    _impl->send_req(req);
+  }
 }
 
 void DBClientImplData::get_regs_infos(const vm_reg_t *ids, RegInfos *out_infos,
@@ -129,76 +144,91 @@ void DBClientImplData::find_regs_ids(const char **reg_names, vm_reg_t *out_ids,
 void DBClientImplData::read_mem(const vm_ptr_t *src_addrs,
                                 const vm_size_t *bufs_sizes, char **out_bufs,
                                 std::size_t nbuffs) {
-  (void)src_addrs;
-  (void)bufs_sizes;
-  (void)out_bufs;
-  (void)nbuffs;
-  assert(0);
+  if (nbuffs == 0)
+    return;
+
+  ReqReadMemVar req;
+  req.nbufs = nbuffs;
+  req.in_addrs = const_cast<vm_ptr_t *>(src_addrs);
+  req.in_bufs_size = const_cast<vm_size_t *>(bufs_sizes);
+  req.out_bufs = out_bufs;
+  _impl->send_req(req);
 }
 
 void DBClientImplData::write_mem(const vm_ptr_t *dst_addrs,
                                  const vm_size_t *bufs_sizes,
                                  const char **in_bufs, std::size_t nbuffs) {
-  (void)dst_addrs;
-  (void)bufs_sizes;
-  (void)in_bufs;
-  (void)nbuffs;
-  assert(0);
+  if (nbuffs == 0)
+    return;
+
+  ReqWriteMemVar req;
+  req.nbufs = nbuffs;
+  req.in_addrs = const_cast<vm_ptr_t *>(dst_addrs);
+  req.in_bufs_size = const_cast<vm_size_t *>(bufs_sizes);
+  req.in_bufs = const_cast<char **>(in_bufs);
+  _impl->send_req(req);
 }
 
 void DBClientImplData::get_symbols_by_ids(const vm_sym_t *ids,
                                           SymbolInfos *out_infos,
                                           std::size_t nsyms) {
-  (void)ids;
-  (void)out_infos;
-  (void)nsyms;
-  assert(0);
+  ReqGetSymsByIds req;
+  req.nsyms = nsyms;
+  req.in_ids = const_cast<vm_sym_t *>(ids);
+  req.out_infos = out_infos;
+  _impl->send_req(req);
 }
 
 void DBClientImplData::get_symbols_by_addr(
     vm_ptr_t addr, vm_size_t size, std::vector<SymbolInfos> &out_infos) {
-  (void)addr;
-  (void)size;
-  (void)out_infos;
-  assert(0);
+  ReqGetSymsByAddr req;
+  req.addr = addr;
+  req.size = size;
+  _impl->send_req(req);
+  out_infos = req.out_infos;
 }
 
 void DBClientImplData::get_symbols_by_names(const char **names,
                                             SymbolInfos *out_infos,
                                             std::size_t nsyms) {
-  (void)names;
-  (void)out_infos;
-  (void)nsyms;
-  assert(0);
+  ReqGetSymsByNames req;
+  req.nsyms = nsyms;
+  req.in_names = const_cast<char **>(names);
+  req.out_infos = out_infos;
+  _impl->send_req(req);
 }
 
 void DBClientImplData::get_code_text(vm_ptr_t addr, std::size_t nins,
                                      std::vector<std::string> &out_text,
                                      std::vector<vm_size_t> &out_sizes) {
-  (void)addr;
-  (void)nins;
-  (void)out_text;
-  (void)out_sizes;
-  assert(0);
+  ReqGetCodeText req;
+  req.addr = addr;
+  req.nins = nins;
+  _impl->send_req(req);
+  out_text = req.out_text;
+  out_sizes = req.out_sizes;
 }
 
 void DBClientImplData::add_breakpoints(const vm_ptr_t *addrs,
                                        std::size_t size) {
-  (void)addrs;
-  (void)size;
-  assert(0);
+  ReqAddBkps req;
+  req.size = size;
+  req.in_addrs = const_cast<vm_ptr_t *>(addrs);
+  _impl->send_req(req);
 }
 
 void DBClientImplData::del_breakpoints(const vm_ptr_t *addrs,
                                        std::size_t size) {
-  (void)addrs;
-  (void)size;
-  assert(0);
+  ReqDelBkps req;
+  req.size = size;
+  req.in_addrs = const_cast<vm_ptr_t *>(addrs);
+  _impl->send_req(req);
 }
 
 void DBClientImplData::resume(ResumeType type) {
-  (void)type;
-  assert(0);
+  ReqResume req;
+  req.type = type;
+  _impl->send_req(req);
 }
 
 } // namespace odb

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -46,6 +47,11 @@ bool TCPDataClient::connect() {
 
   if (::connect(_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     return err("Failed to connect to server");
+
+  // Disable Nagle algorithm to solve small packets issue
+  int yes = 1;
+  if (setsockopt(_fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes)) == -1)
+    return err("setsockopt TCP_NODELAY failed");
 
   return true;
 }

@@ -4,6 +4,9 @@ project(odb)
 # Create log file for odb server
 add_definitions(-DODB_SERVER_DB_LOG)
 
+# Log all inter-process communication messages
+#add_definitions(-DODB_COMM_LOGS)
+
 include_directories(SYSTEM "./extern/Catch2/single_include/")
 include_directories("./include/")
 

@@ -122,7 +122,7 @@ public:
 
   /// Read at many memory locations at once
   /// @param src_addrs array of VM addresses where the data is read
-  /// @param bufs_sizes array of of the number of bytes of each read
+  /// @param bufs_sizes array of the number of bytes of each read
   /// @param out_bufs array of buffers where the data will be writtem
   /// @param nbuffs size of arrays
   void read_mem(const vm_ptr_t *src_addrs, const vm_size_t *bufs_sizes,

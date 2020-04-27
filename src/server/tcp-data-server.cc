@@ -8,6 +8,7 @@
 #include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -42,7 +43,7 @@ bool TCPDataServer::connect() {
   // avoid bind error
   int yes = 1;
   if (setsockopt(_serv_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
-    return err("setsockopt failed");
+    return err("setsockopt SO_REUSEADDR failed");
 
   struct sockaddr_in serv_addr;
   memset(&serv_addr, 0, sizeof(serv_addr));
@@ -57,6 +58,10 @@ bool TCPDataServer::connect() {
 
   if ((_cli_fd = accept(_serv_fd, (struct sockaddr *)NULL, NULL)) < 0)
     return err("Accept failed");
+
+  // Disable Nagle algorithm to solve small packets issue
+  if (setsockopt(_cli_fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes)) == -1)
+    return err("setsockopt TCP_NODELAY failed");
 
   return true;
 }

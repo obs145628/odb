@@ -52,6 +52,27 @@ template <> void prepare_request(RequestHandler &h, ReqGetRegs &r) {
   h.buffer_2d_out(r.out_bufs, r.nregs, r.reg_size);
 }
 
+template <> void prepare_request(RequestHandler &h, ReqGetRegsVar &r) {
+  h.object_in(r.nregs);
+  h.buffer_in(r.in_ids, r.nregs);
+  h.buffer_in(r.in_regs_size, r.nregs);
+  h.buffer_2dvar_out(r.out_bufs, r.nregs, r.in_regs_size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqSetRegs &r) {
+  h.object_in(r.nregs);
+  h.object_in(r.reg_size);
+  h.buffer_in(r.in_ids, r.nregs);
+  h.buffer_2d_in(r.in_bufs, r.nregs, r.reg_size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqSetRegsVar &r) {
+  h.object_in(r.nregs);
+  h.buffer_in(r.in_ids, r.nregs);
+  h.buffer_in(r.in_regs_size, r.nregs);
+  h.buffer_2dvar_in(r.in_bufs, r.nregs, r.in_regs_size);
+}
+
 template <> void prepare_request(RequestHandler &h, ReqGetRegsInfos &r) {
   h.object_in(r.nregs);
   h.buffer_in(r.ids, r.nregs);
@@ -62,6 +83,73 @@ template <> void prepare_request(RequestHandler &h, ReqFindRegsIds &r) {
   h.object_in(r.nregs);
   h.buffer_2d_in_cstr(r.in_bufs, r.nregs);
   h.buffer_out(r.out_ids, r.nregs);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqReadMem &r) {
+  h.object_in(r.nbufs);
+  h.object_in(r.buf_size);
+  h.buffer_in(r.in_addrs, r.nbufs);
+  h.buffer_2d_out(r.out_bufs, r.nbufs, r.buf_size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqReadMemVar &r) {
+  h.object_in(r.nbufs);
+  h.buffer_in(r.in_addrs, r.nbufs);
+  h.buffer_in(r.in_bufs_size, r.nbufs);
+  h.buffer_2dvar_out(r.out_bufs, r.nbufs, r.in_bufs_size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqWriteMem &r) {
+  h.object_in(r.nbufs);
+  h.object_in(r.buf_size);
+  h.buffer_in(r.in_addrs, r.nbufs);
+  h.buffer_2d_in(r.in_bufs, r.nbufs, r.buf_size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqWriteMemVar &r) {
+  h.object_in(r.nbufs);
+  h.buffer_in(r.in_addrs, r.nbufs);
+  h.buffer_in(r.in_bufs_size, r.nbufs);
+  h.buffer_2dvar_in(r.in_bufs, r.nbufs, r.in_bufs_size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqGetSymsByIds &r) {
+  h.object_in(r.nsyms);
+  h.buffer_in(r.in_ids, r.nsyms);
+  h.buffer_out(r.out_infos, r.nsyms);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqGetSymsByAddr &r) {
+  h.object_in(r.addr);
+  h.object_in(r.size);
+  h.object_out(r.out_infos);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqGetSymsByNames &r) {
+  h.object_in(r.nsyms);
+  h.buffer_2d_in_cstr(r.in_names, r.nsyms);
+  h.buffer_out(r.out_infos, r.nsyms);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqGetCodeText &r) {
+  h.object_in(r.addr);
+  h.object_in(r.nins);
+  h.object_out(r.out_text);
+  h.object_out(r.out_sizes);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqAddBkps &r) {
+  h.object_in(r.size);
+  h.buffer_in(r.in_addrs, r.size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqDelBkps &r) {
+  h.object_in(r.size);
+  h.buffer_in(r.in_addrs, r.size);
+}
+
+template <> void prepare_request(RequestHandler &h, ReqResume &r) {
+  h.object_in(r.type);
 }
 
 template <> void prepare_request(RequestHandler &h, ReqErr &r) {
@@ -174,6 +262,22 @@ template <> void sb_serialize(SerialOutBuff &os, const RegInfos &reg) {
 
 template <> void sb_unserialize(SerialInBuff &is, RegInfos &reg) {
   is >> reg.idx >> reg.name >> reg.size >> reg.kind;
+}
+
+template <> void sb_serialize(SerialOutBuff &os, const SymbolInfos &sym) {
+  os << sym.idx << sym.name << sym.addr;
+}
+
+template <> void sb_unserialize(SerialInBuff &is, SymbolInfos &sym) {
+  is >> sym.idx >> sym.name >> sym.addr;
+}
+
+template <> void sb_serialize(SerialOutBuff &os, const ResumeType &e) {
+  sb_serial_raw(os, static_cast<std::int8_t>(e));
+}
+
+template <> void sb_unserialize(SerialInBuff &is, ResumeType &e) {
+  e = static_cast<ResumeType>(sb_unserial_raw<std::int8_t>(is));
 }
 
 } // namespace odb

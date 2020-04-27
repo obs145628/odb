@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <thread>
 
 #include "odb/mess/request-handler.hh"
@@ -82,8 +83,9 @@ public:
       _state = State::HAS_REQ;
 
       // Waiting until response written by main thread
-      while (!_stop && _state == State::HAS_REQ)
+      while (!_stop && _state == State::HAS_REQ) {
         std::this_thread::yield();
+      }
       if (_stop)
         break;
 
@@ -132,8 +134,12 @@ void DataClientHandler::setup_connection() {
 void DataClientHandler::run_command() {
   // Blocking until next command or disconnected
   using State = DataClientServerRunner::State;
-  while (_runner->state() != State::HAS_REQ && _runner->state() != State::ERROR)
-    std::this_thread::yield();
+  while (_runner->state() != State::HAS_REQ &&
+         _runner->state() != State::ERROR) {
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    // std::this_thread::yield();
+  }
   if (_runner->state() == State::ERROR) {
     _client_disconnected();
     return;
@@ -190,6 +196,36 @@ void DataClientHandler::run_command() {
       break;
     };
 
+    case ReqType::GET_REGS_VAR: {
+      ReqGetRegsVar req;
+      rh.server_read_request(is, req);
+      dc.get_regs(req.in_ids, req.out_bufs, req.in_regs_size, req.nregs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::SET_REGS: {
+      ReqSetRegs req;
+      rh.server_read_request(is, req);
+      vm_size_t regs_sizes[2] = {req.reg_size, 0};
+      dc.set_regs(req.in_ids, (const char **)req.in_bufs, regs_sizes,
+                  req.nregs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::SET_REGS_VAR: {
+      ReqSetRegsVar req;
+      rh.server_read_request(is, req);
+      dc.set_regs(req.in_ids, (const char **)req.in_bufs, req.in_regs_size,
+                  req.nregs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
     case ReqType::GET_REGS_INFOS: {
       ReqGetRegsInfos req;
       rh.server_read_request(is, req);
@@ -203,6 +239,110 @@ void DataClientHandler::run_command() {
       ReqFindRegsIds req;
       rh.server_read_request(is, req);
       dc.find_regs_ids((const char **)req.in_bufs, req.out_ids, req.nregs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::READ_MEM: {
+      ReqReadMem req;
+      rh.server_read_request(is, req);
+      vm_size_t bufs_size[2] = {req.buf_size, 0};
+      dc.read_mem(req.in_addrs, bufs_size, req.out_bufs, req.nbufs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::READ_MEM_VAR: {
+      ReqReadMemVar req;
+      rh.server_read_request(is, req);
+      dc.read_mem(req.in_addrs, req.in_bufs_size, req.out_bufs, req.nbufs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::WRITE_MEM: {
+      ReqWriteMem req;
+      rh.server_read_request(is, req);
+      vm_size_t bufs_size[2] = {req.buf_size, 0};
+      dc.write_mem(req.in_addrs, bufs_size, (const char **)req.in_bufs,
+                   req.nbufs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::WRITE_MEM_VAR: {
+      ReqWriteMemVar req;
+      rh.server_read_request(is, req);
+      dc.write_mem(req.in_addrs, req.in_bufs_size, (const char **)req.in_bufs,
+                   req.nbufs);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::GET_SYMS_BY_IDS: {
+      ReqGetSymsByIds req;
+      rh.server_read_request(is, req);
+      dc.get_symbols_by_ids(req.in_ids, req.out_infos, req.nsyms);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::GET_SYMS_BY_ADDR: {
+      ReqGetSymsByAddr req;
+      rh.server_read_request(is, req);
+      dc.get_symbols_by_addr(req.addr, req.size, req.out_infos);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::GET_SYMS_BY_NAMES: {
+      ReqGetSymsByNames req;
+      rh.server_read_request(is, req);
+      dc.get_symbols_by_names((const char **)req.in_names, req.out_infos,
+                              req.nsyms);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::GET_CODE_TEXT: {
+      ReqGetCodeText req;
+      rh.server_read_request(is, req);
+      dc.get_code_text(req.addr, req.nins, req.out_text, req.out_sizes);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::ADD_BKPS: {
+      ReqAddBkps req;
+      rh.server_read_request(is, req);
+      dc.add_breakpoints(req.in_addrs, req.size);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::DEL_BKPS: {
+      ReqDelBkps req;
+      rh.server_read_request(is, req);
+      dc.del_breakpoints(req.in_addrs, req.size);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    case ReqType::RESUME: {
+      ReqResume req;
+      rh.server_read_request(is, req);
+      dc.resume(req.type);
       os << is_ty;
       rh.server_write_response(os, req);
       break;
