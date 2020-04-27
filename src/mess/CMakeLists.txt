@@ -1,19 +1,7 @@
 set(SRC
   db-client.cc
   request.cc
-  response.cc
   simple-cli-client.cc
   tcp-transfer.cc
 )
 add_library(odb_mess ${SRC})
-
-
-#set(TEST_SRC
-#  test_main.cc
-#  test_encode.cc
-#  test_ins.cc
-#)
-#set(TEST_NAME utest_oc8is.bin)
-#add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC})
-#target_link_libraries(${TEST_NAME} oc8_is) 
-#add_dependencies(build-tests ${TEST_NAME})
