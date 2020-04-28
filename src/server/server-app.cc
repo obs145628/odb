@@ -31,8 +31,6 @@ constexpr const char *ENV_CONF_MODE_TCP = "ODB_CONF_MODE_TCP";
 constexpr const char *ENV_CONF_TCP_PORT = "ODB_CONF_TCP_PORT";
 } // namespace
 
-bool ServerApp::g_force_stop_db = false;
-
 ServerApp::ServerApp(const ServerConfig &conf, const api_builder_f &api_builder)
     : _conf(conf), _api_builder(api_builder) {
 
@@ -87,16 +85,18 @@ void ServerApp::loop() {
       _stop_db();
   }
 
-  // Check global stop variable
-  if (g_force_stop_db) {
-    _stop_db();
-    g_force_stop_db = false;
-  }
-
   for (;;) {
-    // Returns direcly if client disconnected, or program running
-    if (_client->get_state() == ClientHandler::State::DISCONNECTED ||
-        !_db_is_stopped())
+    // Returns direcly if client disconnected
+    if (_client->get_state() == ClientHandler::State::DISCONNECTED)
+      break;
+
+    // If client connected and VM Running, check for stop commands
+    if (!_db_is_stopped() &&
+        _client->get_state() == ClientHandler::State::CONNECTED)
+      _client->check_stopped();
+
+    // Returns direcly if VM still running
+    if (!_db_is_stopped())
       break;
 
     // Block until the client is connected

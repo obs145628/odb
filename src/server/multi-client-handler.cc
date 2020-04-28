@@ -41,4 +41,12 @@ void MultiClientHandler::run_command() {
     _client_disconnected();
 }
 
+void MultiClientHandler::check_stopped() {
+  assert(_main.get() != nullptr);
+
+  _main->check_stopped();
+  if (_main->get_state() == State::DISCONNECTED)
+    _client_disconnected();
+}
+
 } // namespace odb

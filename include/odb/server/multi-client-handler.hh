@@ -36,6 +36,8 @@ public:
 
   void run_command() override;
 
+  void check_stopped() override;
+
 private:
   std::vector<std::unique_ptr<ClientHandler>> _wait;
   std::unique_ptr<ClientHandler> _main;

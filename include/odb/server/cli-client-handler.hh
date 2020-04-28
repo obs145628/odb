@@ -32,6 +32,8 @@ public:
 
   void run_command() override;
 
+  void check_stopped() override;
+
 private:
   DBClient _db_client;
   SimpleCLIClient _client;

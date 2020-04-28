@@ -28,6 +28,10 @@ void DBClient::stop() {
   assert(_state == State::VM_RUNNING);
   _impl->stop();
   _state = State::VM_STOPPED;
+
+  // need to do another call get current state infos
+  _impl->check_stopped(_udp);
+  assert(_udp.stopped);
 }
 
 void DBClient::check_stopped() {

@@ -169,11 +169,14 @@ void DataClientHandler::run_command() {
     }
 
     case ReqType::STOP: {
-      ReqStop req;
-      rh.server_read_request(is, req);
-      dc.stop();
-      os << is_ty;
-      rh.server_write_response(os, req);
+      throw VMApi::Error("Cannot stop already stopped program\n");
+      /*
+    ReqStop req;
+    rh.server_read_request(is, req);
+    dc.stop();
+    os << is_ty;
+    rh.server_write_response(os, req);
+      */
       break;
     }
 
@@ -350,6 +353,64 @@ void DataClientHandler::run_command() {
 
     default:
       throw VMApi::Error("Bad API request");
+    }
+
+  } catch (VMApi::Error &e) {
+    ReqErr err;
+    err.msg = e.what();
+    os << ReqType::ERR;
+    rh.server_write_response(os, err);
+  }
+
+  _runner->signal_res();
+}
+
+void DataClientHandler::check_stopped() {
+
+  // Doesn't block, just check if has request or get deconneted
+  using State = DataClientServerRunner::State;
+  if (_runner->state() != State::HAS_REQ)
+    return;
+  if (_runner->state() == State::ERROR) {
+    _client_disconnected();
+    return;
+  }
+
+  DBClientImplVMSide dc(get_debugger());
+  // @tip ok to create one at every call, just an interface without state
+  auto &rh = _runner->request_handler();
+  auto &is = _runner->get_req();
+  auto &os = _runner->get_res();
+  os.reset();
+
+  ReqType is_ty;
+  is >> is_ty;
+
+  try {
+    // Only stop command is valid
+    switch (is_ty) {
+
+    case ReqType::STOP: {
+      ReqStop req;
+      rh.server_read_request(is, req);
+      dc.stop();
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    }
+
+    case ReqType::CHECK_STOPPED: {
+      ReqCheckStopped req;
+      rh.server_read_request(is, req);
+      dc.check_stopped(req.out_udp);
+      os << is_ty;
+      rh.server_write_response(os, req);
+      break;
+    };
+
+    default:
+      throw VMApi::Error(
+          "Only stop and check stopped request can be sent while VM running");
     }
 
   } catch (VMApi::Error &e) {

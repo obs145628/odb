@@ -38,6 +38,8 @@ public:
 
   void run_command() override;
 
+  void check_stopped() override;
+
 private:
   Kind _kind;
   std::unique_ptr<DataClientServerRunner> _runner;

@@ -13,7 +13,10 @@ namespace odb {
 
 namespace {
 
-void sigint_handler_fn(int) { ServerApp::g_force_stop_db = true; }
+bool g_sig_stop = false;
+bool g_manual_stop = false;
+
+void sigint_handler_fn(int) { g_sig_stop = true; }
 
 } // namespace
 
@@ -46,6 +49,10 @@ void CLIClientHandler::run_command() {
     _db_client.check_stopped();
     stopped = true;
   }
+  if (g_manual_stop) {
+    stopped = true;
+    g_manual_stop = false;
+  }
   assert(_db_client.state() == DBClient::State::VM_STOPPED);
 
   if (stopped)
@@ -56,7 +63,7 @@ void CLIClientHandler::run_command() {
     std::cout.flush();
   }
 
-  // Disconnect is stdin closed
+  // Disconnect if stdin closed
   std::cin.peek();
   if (!std::cin.good()) {
     _client_disconnected();
@@ -75,6 +82,17 @@ void CLIClientHandler::run_command() {
   std::cout << out;
   if (!out.empty() && out.back() != '\n')
     std::cout << std::endl;
+}
+
+void CLIClientHandler::check_stopped() {
+  // @TODO
+
+  if (!g_sig_stop)
+    return;
+
+  _db_client.stop();
+  g_sig_stop = false;
+  g_manual_stop = true;
 }
 
 void CLIClientHandler::_on_disconnect() {

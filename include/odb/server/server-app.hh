@@ -73,11 +73,6 @@ class ServerApp {
 public:
   using api_builder_f = std::function<std::unique_ptr<VMApi>()>;
 
-  // Global variable used to stop the program
-  // Check inside `loop()`, if set to true, _db->stop() is called
-  // This is a global to be able to stop the DB on signal handlers
-  static bool g_force_stop_db;
-
   /// `api_builder` is a functor called when needed to build the debugger core
   /// It is never called if the debugger isn't enabled
   ServerApp(const ServerConfig &conf, const api_builder_f &api_builder);

@@ -28,4 +28,5 @@ add_subdirectory(src/server)
 add_subdirectory(src/server_capi)
 add_subdirectory(src/utils)
 
+add_subdirectory(src/apps/odb-cli)
 add_subdirectory(src/apps/odb-client-simple-cli)

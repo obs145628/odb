@@ -1,0 +1,35 @@
+
+# TODO
+
+- create main cli client to use ODB
+
+- Make sure OC8 works correcly with ODB
+
+- Update OC8 README, use odb version from extern dir, and push to master
+
+- create generic vm
+
+- create and test generic llvm-like iR
+
+- create and test generic ARM GBA-like
+
+- create and test generic x64 like
+
+
+# Optimizations
+
+- replace sleep by signal method on data-client-handler
+
+- use async method instead of threads on data-client-handler
+
+- when get_regs / set_regs / read_mem / write_mem used on DBClient,
+  check if all variable size are the same, to make the special call with static size.
+
+- cache all possible requests with DBClient
+
+
+# Code design
+
+- make all requests object on request.hh use the in / out field name convention
+
+- change location of VMApi::Error (maybe put it where all other vm info types are defined)

@@ -58,6 +58,11 @@ public:
   /// client gets deconneted.
   virtual void run_command() = 0;
 
+  /// This function is called when the VM is running, to check if received a
+  /// stop command, and execute it. Contrary to run_command, this function must
+  /// not block to read commands
+  virtual void check_stopped() = 0;
+
 protected:
   /// Called by Child class when a client get connected
   void _client_connected();
