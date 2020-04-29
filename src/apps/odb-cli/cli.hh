@@ -1,3 +1,15 @@
+//===-- apps/odb-cli/cli.hh - CLI class definition --------------*- C++ -*-===//
+//
+// ODB Library
+// Author: Steven Lariau
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Centralize client/server interface to communicate with debugger
+///
+//===----------------------------------------------------------------------===//
+
 #pragma once
 
 #include "odb/client/db-client-impl-data.hh"
